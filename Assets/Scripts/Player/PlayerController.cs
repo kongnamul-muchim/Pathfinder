@@ -18,12 +18,19 @@ namespace Pathfinder.Player
         [SerializeField] private float _stepHeight = 0.2f;
         [SerializeField] private float _stepCheckDistance = 0.1f;
         
+        [Header("Wall Detection")]
+        [SerializeField] private float _wallCheckDistance = 0.35f;
+        [SerializeField] private float _wallSlideSpeed = 2f;
+        [SerializeField] private LayerMask _wallLayer;
+        
         [Header("Jump")]
         [SerializeField] private float _jumpForce = 10f;
         [SerializeField] private LayerMask _groundLayer;
         [SerializeField] private Transform _groundCheck;
         [SerializeField] private float _groundCheckRadius = 0.2f;
         
+        private bool _isTouchingWall;
+        private float _wallDirection;
         private Rigidbody2D _rb;
         private bool _isGrounded;
         private float _horizontalInput;
@@ -59,6 +66,12 @@ namespace Pathfinder.Player
                 groundCheckObj.transform.SetParent(transform);
                 groundCheckObj.transform.localPosition = new Vector3(0, -0.5f, 0);
                 _groundCheck = groundCheckObj.transform;
+            }
+            
+            // Wall Layer가 설정되지 않았으면 Ground Layer 사용
+            if (_wallLayer == 0)
+            {
+                _wallLayer = _groundLayer;
             }
         }
         
@@ -130,19 +143,81 @@ namespace Pathfinder.Player
         
         private void FixedUpdate()
         {
-            // 이동
-            Vector2 velocity = _rb.linearVelocity;
-            velocity.x = _horizontalInput * _moveSpeed;
-            _rb.linearVelocity = velocity;
+            // 벽 감지
+            CheckWallCollision();
             
-            // 작은 단차(step) 자동 올라가기
-            HandleStepUp();
+            // 이동 (벽에 닿지 않았을 때만)
+            if (!_isTouchingWall)
+            {
+                Vector2 velocity = _rb.linearVelocity;
+                velocity.x = _horizontalInput * _moveSpeed;
+                _rb.linearVelocity = velocity;
+            }
+            else
+            {
+                // 벽에 닿았을 때는 X축 이동 멈춤, Y축은 자유롭게 (미끄러짐)
+                Vector2 velocity = _rb.linearVelocity;
+                velocity.x = 0;
+                // 벽에 붙어있을 때 아래로 미끄러지게
+                if (!_isGrounded && velocity.y > -_wallSlideSpeed)
+                {
+                    velocity.y = -_wallSlideSpeed;
+                }
+                _rb.linearVelocity = velocity;
+            }
+            
+            // 작은 단차(step) 자동 올라가기 (벽에 닿지 않았을 때만)
+            if (!_isTouchingWall)
+            {
+                HandleStepUp();
+            }
             
             // 점프
             if (_jumpRequested)
             {
                 _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
                 _jumpRequested = false;
+            }
+        }
+        
+        /// <summary>
+        /// 벽 충돌 감지
+        /// </summary>
+        private void CheckWallCollision()
+        {
+            if (Mathf.Abs(_horizontalInput) < 0.01f)
+            {
+                _isTouchingWall = false;
+                return;
+            }
+            
+            float direction = Mathf.Sign(_horizontalInput);
+            Vector2 position = transform.position;
+            
+            // 여러 지점에서 벽 체크 (더 정확한 감지)
+            Vector2[] checkPoints = new Vector2[]
+            {
+                position + Vector2.up * 0.5f,    // 상단
+                position,                         // 중앙
+                position + Vector2.down * 0.3f    // 하단
+            };
+            
+            _isTouchingWall = false;
+            foreach (var checkPoint in checkPoints)
+            {
+                RaycastHit2D wallHit = Physics2D.Raycast(
+                    checkPoint, 
+                    Vector2.right * direction, 
+                    _wallCheckDistance, 
+                    _wallLayer
+                );
+                
+                if (wallHit.collider != null)
+                {
+                    _isTouchingWall = true;
+                    _wallDirection = direction;
+                    break;
+                }
             }
         }
         
@@ -171,18 +246,6 @@ namespace Pathfinder.Player
                 {
                     // 부드럽게 위로 밀어 올림
                     _rb.position += Vector2.up * heightDiff * 0.5f;
-                }
-            }
-            
-            // 앞쪽 벽 감지하여 미끄러지게 처리
-            Vector2 wallCheckStart = position + Vector2.up * 0.3f;
-            RaycastHit2D wallHit = Physics2D.Raycast(wallCheckStart, Vector2.right * direction, 0.35f, _groundLayer);
-            if (wallHit.collider != null)
-            {
-                // 벽에 닿았을 때 아래로 미끄러지도록
-                if (_rb.linearVelocity.y > -1f)
-                {
-                    _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, -1f);
                 }
             }
         }
@@ -223,10 +286,19 @@ namespace Pathfinder.Player
                 Gizmos.color = Color.yellow;
                 Gizmos.DrawLine(rayStart, rayStart + Vector2.down * _stepCheckDistance);
                 
-                // Wall check
-                Vector2 wallCheckStart = position + Vector2.up * 0.3f;
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(wallCheckStart, wallCheckStart + Vector2.right * direction * 0.35f);
+                // Wall check (3 points)
+                Vector2[] checkPoints = new Vector2[]
+                {
+                    position + Vector2.up * 0.5f,
+                    position,
+                    position + Vector2.down * 0.3f
+                };
+                
+                Gizmos.color = _isTouchingWall ? Color.magenta : Color.red;
+                foreach (var checkPoint in checkPoints)
+                {
+                    Gizmos.DrawLine(checkPoint, checkPoint + Vector2.right * direction * _wallCheckDistance);
+                }
             }
         }
     }
