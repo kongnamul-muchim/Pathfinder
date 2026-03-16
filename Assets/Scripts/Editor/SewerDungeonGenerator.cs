@@ -74,8 +74,10 @@ namespace Pathfinder.Editor
         
         private void GenerateDungeon()
         {
-            // 씬에서 VillageMap 찾기 (또는 새로 생성)
-            GameObject dungeonMap = GameObject.Find("VillageMap") ?? GameObject.Find("DungeonMap");
+            // 씬에서 DungeonMap 찾기 (또는 새로 생성)
+            GameObject dungeonMap = GameObject.Find("DungeonMap");
+            Transform gridTransform = null;
+            
             if (dungeonMap == null)
             {
                 // 새로 생성
@@ -93,10 +95,21 @@ namespace Pathfinder.Editor
                 CreateTilemap(gridObj.transform, "Platforms", 2);
                 CreateTilemap(gridObj.transform, "Decoration", 3);
                 CreateTilemap(gridObj.transform, "Background", -1);
+                
+                gridTransform = gridObj.transform;
+            }
+            else
+            {
+                gridTransform = dungeonMap.transform.Find("Grid");
+            }
+            
+            if (gridTransform == null)
+            {
+                EditorUtility.DisplayDialog("오류", "Grid 오브젝트를 찾을 수 없습니다.", "확인");
+                return;
             }
             
             // 타일맵 찾기
-            Transform gridTransform = dungeonMap.transform.Find("Grid");
             Tilemap groundTilemap = gridTransform.Find("Ground")?.GetComponent<Tilemap>();
             Tilemap wallsTilemap = gridTransform.Find("Walls")?.GetComponent<Tilemap>();
             Tilemap platformsTilemap = gridTransform.Find("Platforms")?.GetComponent<Tilemap>();
@@ -105,7 +118,7 @@ namespace Pathfinder.Editor
             
             if (groundTilemap == null || wallsTilemap == null)
             {
-                EditorUtility.DisplayDialog("오류", "Tilemap 오브젝트를 찾을 수 없습니다.", "확인");
+                EditorUtility.DisplayDialog("오류", "Ground 또는 Walls Tilemap을 찾을 수 없습니다.\nGrid 아래에 Tilemap 오브젝트가 있는지 확인하세요.", "확인");
                 return;
             }
             
