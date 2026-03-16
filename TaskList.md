@@ -57,8 +57,8 @@ Assets/
 - [x] **Task 1.4**: Installer 설정 (DI 등록)
 
 ### Phase 2: 플레이어 코어 🎯
-- [ ] **Task 2.1**: PlayerController (이동, 점프, 물리)
-- [ ] **Task 2.2**: PlayerInput (Input System - 키보드/패드)
+- [x] **Task 2.1**: PlayerController (이동, 점프, 물리)
+- [x] **Task 2.2**: PlayerInput (Input System - 키보드/패드)
 - [ ] **Task 2.3**: AbilityManager (보유 능력 관리)
 - [ ] **Task 2.4**: DeathManager (즉사, 리스폰)
 
@@ -192,6 +192,7 @@ Assets/
 
 | 날짜 | 커밋 메시지 | 변경 내용 |
 |------|------------|-----------|
+| 2026-03-16 | feat: Implement PlayerController with DI integration | PlayerController, IAbilityManager, IDeathManager, GameInstaller 추가 |
 | 2026-03-16 | feat: Implement DI Container system with RootContext architecture | DI Container 구현, Installer/RootContext 추가, AGENT.md 생성 |
 | 2026-03-16 | docs: Update TaskList for Metroidvania style | 메트로바니아 스타일로 구조 변경 |
 | 2026-03-12 | Initial commit: Project setup with folder structure | 폴더 구조 생성, TaskList.md 추가 |
