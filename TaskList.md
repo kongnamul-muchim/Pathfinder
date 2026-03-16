@@ -56,17 +56,17 @@ Assets/
 - [x] **Task 1.3**: GameManager 구현 (게임 상태 관리)
 - [x] **Task 1.4**: Installer 설정 (DI 등록)
 
-### Phase 2: 플레이어 코어 🎯
+### Phase 2: 플레이어 코어 ✅
 - [x] **Task 2.1**: PlayerController (이동, 점프, 물리)
 - [x] **Task 2.2**: PlayerInput (Input System - 키보드/패드)
-- [ ] **Task 2.3**: AbilityManager (보유 능력 관리)
-- [ ] **Task 2.4**: DeathManager (즉사, 리스폰)
-- [ ] **Task 2.5**: Player Animation System (Penguin 에셋 연동)
+- [x] **Task 2.3**: AbilityManager (보유 능력 관리)
+- [x] **Task 2.4**: DeathManager (즉사, 리스폰)
+- [x] **Task 2.5**: Player Animation System (Penguin 에셋 연동)
   - [x] **Subtask 2.5.1**: PlayerAnimator 컴포넌트 생성 (Animator 상태 관리)
   - [x] **Subtask 2.5.2**: 통합 Animator Controller 설정 (Idle, Walk, Jump, Death)
   - [x] **Subtask 2.5.3**: PlayerController에 애니메이션 트리거 연동
   - [x] **Subtask 2.5.4**: 방향 전환 (좌우) 구현 (Sprite Flip)
-  - [ ] **Subtask 2.5.5**: Penguin 스프라이트 Player 프리팹에 적용
+  - [ ] **Subtask 2.5.5**: Penguin 스프라이트 Player 프리팹에 적용 (Unity에서 수동 설정)
 
 ### Phase 3: 메트로바니아 시스템
 - [ ] **Task 3.1**: MapManager (맵 전환 관리)
