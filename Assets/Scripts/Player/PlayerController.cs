@@ -13,6 +13,11 @@ namespace Pathfinder.Player
         [Header("Movement")]
         [SerializeField] private float _moveSpeed = 5f;
         
+        [Header("Ground Detection")]
+        [SerializeField] private float _groundCheckDistance = 0.1f;
+        [SerializeField] private float _stepHeight = 0.2f;
+        [SerializeField] private float _stepCheckDistance = 0.1f;
+        
         [Header("Jump")]
         [SerializeField] private float _jumpForce = 10f;
         [SerializeField] private LayerMask _groundLayer;
@@ -130,11 +135,55 @@ namespace Pathfinder.Player
             velocity.x = _horizontalInput * _moveSpeed;
             _rb.linearVelocity = velocity;
             
+            // 작은 단차(step) 자동 올라가기
+            HandleStepUp();
+            
             // 점프
             if (_jumpRequested)
             {
                 _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
                 _jumpRequested = false;
+            }
+        }
+        
+        /// <summary>
+        /// 작은 단차(step)를 만나면 자연스럽게 위로 밀어 올림
+        /// </summary>
+        private void HandleStepUp()
+        {
+            if (Mathf.Abs(_horizontalInput) < 0.01f) return;
+            
+            // 이동 방향
+            float direction = Mathf.Sign(_horizontalInput);
+            Vector2 position = transform.position;
+            
+            // 캐릭터 앞쪽 아래 지점에서 Raycast
+            Vector2 rayStart = position + Vector2.right * direction * 0.3f;
+            rayStart.y -= 0.2f;
+            
+            // 작은 단차 감지 (낮은 높이의 장애물)
+            RaycastHit2D hit = Physics2D.Raycast(rayStart, Vector2.down, _stepCheckDistance, _groundLayer);
+            if (hit.collider != null)
+            {
+                // 바닥이 있고, 현재 위치보다 조금 높은 경우
+                float heightDiff = hit.point.y - (position.y - 0.5f);
+                if (heightDiff > 0.01f && heightDiff < _stepHeight)
+                {
+                    // 부드럽게 위로 밀어 올림
+                    _rb.position += Vector2.up * heightDiff * 0.5f;
+                }
+            }
+            
+            // 앞쪽 벽 감지하여 미끄러지게 처리
+            Vector2 wallCheckStart = position + Vector2.up * 0.3f;
+            RaycastHit2D wallHit = Physics2D.Raycast(wallCheckStart, Vector2.right * direction, 0.35f, _groundLayer);
+            if (wallHit.collider != null)
+            {
+                // 벽에 닿았을 때 아래로 미끄러지도록
+                if (_rb.linearVelocity.y > -1f)
+                {
+                    _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, -1f);
+                }
             }
         }
         
@@ -160,6 +209,24 @@ namespace Pathfinder.Player
             {
                 Gizmos.color = Color.green;
                 Gizmos.DrawWireSphere(_groundCheck.position, _groundCheckRadius);
+            }
+            
+            // Step detection visualization
+            if (Application.isPlaying && Mathf.Abs(_horizontalInput) > 0.01f)
+            {
+                float direction = Mathf.Sign(_horizontalInput);
+                Vector2 position = transform.position;
+                
+                // Step up check
+                Vector2 rayStart = position + Vector2.right * direction * 0.3f;
+                rayStart.y -= 0.2f;
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawLine(rayStart, rayStart + Vector2.down * _stepCheckDistance);
+                
+                // Wall check
+                Vector2 wallCheckStart = position + Vector2.up * 0.3f;
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(wallCheckStart, wallCheckStart + Vector2.right * direction * 0.35f);
             }
         }
     }
