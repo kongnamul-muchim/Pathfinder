@@ -61,6 +61,12 @@ Assets/
 - [x] **Task 2.2**: PlayerInput (Input System - 키보드/패드)
 - [ ] **Task 2.3**: AbilityManager (보유 능력 관리)
 - [ ] **Task 2.4**: DeathManager (즉사, 리스폰)
+- [ ] **Task 2.5**: Player Animation System (Penguin 에셋 연동)
+  - [x] **Subtask 2.5.1**: PlayerAnimator 컴포넌트 생성 (Animator 상태 관리)
+  - [x] **Subtask 2.5.2**: 통합 Animator Controller 설정 (Idle, Walk, Jump, Death)
+  - [x] **Subtask 2.5.3**: PlayerController에 애니메이션 트리거 연동
+  - [x] **Subtask 2.5.4**: 방향 전환 (좌우) 구현 (Sprite Flip)
+  - [ ] **Subtask 2.5.5**: Penguin 스프라이트 Player 프리팹에 적용
 
 ### Phase 3: 메트로바니아 시스템
 - [ ] **Task 3.1**: MapManager (맵 전환 관리)
@@ -105,12 +111,13 @@ Assets/
 - [ ] **Task 9.6**: 포탈 연결 설정
 
 ### Phase 10: 스프라이트 및 리소스
-- [ ] **Task 10.1**: 플레이어 스프라이트
-- [ ] **Task 10.2**: 능력 구체 스프라이트
-- [ ] **Task 10.3**: 포탈/체크포인트 스프라이트
-- [ ] **Task 10.4**: 함정 스프라이트
-- [ ] **Task 10.5**: 보스 스프라이트
-- [ ] **Task 10.6**: 타일/배경 스프라이트
+- [x] **Task 10.1**: 플레이어 스프라이트 (Nine Pines Penguin 에셋 사용)
+- [x] **Task 10.2**: 플레이어 애니메이션 (Idle, Walk, Jump, Death)
+- [ ] **Task 10.3**: 능력 구체 스프라이트
+- [ ] **Task 10.4**: 포탈/체크포인트 스프라이트
+- [ ] **Task 10.5**: 함정 스프라이트
+- [ ] **Task 10.6**: 보스 스프라이트
+- [ ] **Task 10.7**: 타일/배경 스프라이트
 
 ### Phase 11: 테스트 및 최적화
 - [ ] **Task 11.1**: 기능 테스트
@@ -207,7 +214,8 @@ Assets/
 - **참고**: ScriptableObject는 Inspector에서 데이터 수정 가능
 - **참고**: 복잡한 로직은 인터페이스 + DI로 분리
 - **참고**: 메트로바니아 = 완전 자유 탐색, Ability Gate로 진행 조절
+- **참고**: 플레이어 애니메이션은 Nine Pines Animation - Penguin 에셋 사용
 
 ---
 
-*마지막 업데이트: 2026-03-16*
+*마지막 업데이트: 2026-03-16 (Task 2.5 애니메이션 시스템 추가)*
