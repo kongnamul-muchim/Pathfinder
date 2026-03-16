@@ -1,21 +1,28 @@
 # Pathfinder 게임 개발 Task List
 
-> **프로젝트**: Pathfinder - 함정 피하기 2D 플랫포머  
+> **프로젝트**: Pathfinder - 메트로바니아 스타일 2D 플랫포머  
 > **시작일**: 2026-03-12  
 > **Unity 버전**: 2022.3 LTS (URP 2D)  
-> **코딩 표준**: SOLID 원칙 + Custom DI Container
+> **코딩 표준**: SOLID 원칙 + Custom DI Container  
 
 ---
 
-## 📋 프로젝트 개요
+## 📋 프로젝트 개요 (메트로바니아 스타일)
 
-**게임 목표**: 맵에 존재하는 모든 레버를 상호작용하면 문이 열리고, 문으로 들어가면 스테이지 클리어  
-**보스 스테이지**: 배경에 보스가 나타나 기믹 공격을 피해 레버를 당기면 보스 체력 감소
+**게임 목표**: 4개의 맵을 자유롭게 탐색하여 능력 구체를 획득하고, 모든 능력을 모으면 보스맵 입장 → 보스 처치로 게임 클리어
 
-**능력 해금 시스템**:
-- 스테이지 1: 기본 조작 (이동, 점프)
-- 스테이지 2 클리어: 2단 점프 해금
-- 스테이지 3 클리어: 시점 변환 해금 (숨겨진 발판 표시/숨김)
+**핵심 메커니즘**:
+- **즉사 시스템**: 함정/적 접촉 시 즉시 사망 (HP 없음)
+- **능력 해금**: 각 맵에 배치된 능력 구체 획득 시 해금
+  - DoubleJump: 높은 곳 접근 가능
+  - PerspectiveShift: 숨겨진 발판/레버 표시
+- **완전 자유 탐색**: 능력이 없으면 못 가는 곳 존재 (Ability Gate)
+- **백트래킹**: 이전 맵으로 돌아가 새로운 구역 탐색
+
+**맵 구성**:
+- 한 씬에 5개 맵 (작은 맵 4개 + 보스맵 1개 큼)
+- 포탈로 연결 (검은 화면 전환)
+- 각 맵에 세이브포인트 존재
 
 ---
 
@@ -24,110 +31,140 @@
 ```
 Assets/
 ├── Scripts/
-│   ├── Core/           # DI Container, GameManager, EventBus
-│   ├── Player/         # PlayerMovement, PlayerAbilities, PlayerHealth
-│   ├── Interactables/  # Lever, Door, InteractionSystem
-│   ├── Traps/          # Spike, MovingPlatform, TimedTrap (인터페이스 기반)
-│   ├── Enemies/        # PatrolEnemy, Boss
-│   ├── UI/             # Timer, StageIndicator, LeverCounter
-│   ├── Data/           # ScriptableObject 설정 파일들
-│   └── Interfaces/     # 게임 전체 인터페이스 정의
-├── Prefabs/            # 프리팹 저장
-├── Sprites/            # 2D 스프라이트 (픽셀 아트)
-└── Scenes/             # 5개 스테이지 씬
+│   ├── Core/              # DI Container, GameManager, EventBus
+│   ├── Player/            # PlayerController, AbilityManager
+│   ├── World/             # MapManager, Portal, Checkpoint
+│   ├── Abilities/         # AbilityUnlockable, AbilityGate
+│   ├── Interactables/     # Lever, Door (테스트용)
+│   ├── Traps/             # Spike, MovingPlatform (인터페이스 기반)
+│   ├── Boss/              # Boss, BossGate
+│   ├── UI/                # DeathCounter, AbilityUI
+│   ├── Data/              # ScriptableObject 설정 파일들
+│   └── Interfaces/        # 게임 전체 인터페이스 정의
+├── Prefabs/               # 프리팹 저장
+├── Sprites/               # 2D 스프라이트 (픽셀 아트)
+└── Scenes/                # MainScene (모든 맵 포함)
 ```
 
 ---
 
 ## ✅ 작업 목록
 
-### Phase 1: 코어 시스템 구축
+### Phase 1: 코어 시스템 ✅
 - [x] **Task 1.1**: DI Container 구현 (DI_Library.md 기반)
 - [x] **Task 1.2**: EventBus 시스템 구현 (느슨한 결합)
-- [ ] **Task 1.3**: GameManager 구현 (게임 상태 관리)
+- [x] **Task 1.3**: GameManager 구현 (게임 상태 관리)
 - [x] **Task 1.4**: Installer 설정 (DI 등록)
 
-### Phase 2: 플레이어 시스템
-- [ ] **Task 2.1**: PlayerMovement 구현 (기본 이동, 점프)
-- [ ] **Task 2.2**: PlayerAbilities 구현 (2단 점프, 시점 변환)
-- [ ] **Task 2.3**: PlayerHealth 구현 (데스, 리스폰)
-- [ ] **Task 2.4**: PlayerInput 구현 (Input System)
+### Phase 2: 플레이어 코어 🎯
+- [ ] **Task 2.1**: PlayerController (이동, 점프, 물리)
+- [ ] **Task 2.2**: PlayerInput (Input System - 키보드/패드)
+- [ ] **Task 2.3**: AbilityManager (보유 능력 관리)
+- [ ] **Task 2.4**: DeathManager (즉사, 리스폰)
 
-### Phase 3: 상호작용 시스템
-- [ ] **Task 3.1**: IInteractable 인터페이스 정의
-- [ ] **Task 3.2**: Lever 구현 (레버 작동)
-- [ ] **Task 3.3**: Door 구현 (문 열림/닫힘)
-- [ ] **Task 3.4**: Lever-Door 연동 시스템
+### Phase 3: 메트로바니아 시스템
+- [ ] **Task 3.1**: MapManager (맵 전환 관리)
+- [ ] **Task 3.2**: Portal (맵 간 이동, 검은 화면 전환)
+- [ ] **Task 3.3**: Checkpoint (세이브포인트, 리스폰 위치)
+- [ ] **Task 3.4**: AbilityUnlockable (능력 구체)
+- [ ] **Task 3.5**: AbilityGate (능력 요구 구역)
+- [ ] **Task 3.6**: CameraController (맵 전환 시 카메라)
 
-### Phase 4: 함정 시스템
-- [ ] **Task 4.1**: ITrap 인터페이스 정의
-- [ ] **Task 4.2**: SpikeTrap 구현 (가시 함정)
-- [ ] **Task 4.3**: MovingPlatform 구현 (움직이는 플랫폼)
-- [ ] **Task 4.4**: TimedTrap 구현 (시간 기반 함정)
+### Phase 4: 능력 구현
+- [ ] **Task 4.1**: DoubleJump 능력
+- [ ] **Task 4.2**: PerspectiveShift 능력 (숨겨진 오브젝트 표시)
 
-### Phase 5: 적 및 보스 시스템
-- [ ] **Task 5.1**: IEnemy 인터페이스 정의
-- [ ] **Task 5.2**: PatrolEnemy 구현 (순찰 적)
-- [ ] **Task 5.3**: Boss 구현 (배경 보스)
-- [ ] **Task 5.4**: BossAttack 패턴 구현
+### Phase 5: 함정 시스템
+- [ ] **Task 5.1**: ITrap 인터페이스 정의
+- [ ] **Task 5.2**: SpikeTrap (가시 함정)
+- [ ] **Task 5.3**: MovingPlatform (움직이는 플랫폼)
 
-### Phase 6: UI 시스템
-- [ ] **Task 6.1**: Timer 구현
-- [ ] **Task 6.2**: StageIndicator 구현
-- [ ] **Task 6.3**: LeverCounter 구현
-- [ ] **Task 6.4**: DeathCounter 구현
+### Phase 6: 상호작용 (테스트용)
+- [ ] **Task 6.1**: IInteractable 인터페이스
+- [ ] **Task 6.2**: Lever (레버 작동)
+- [ ] **Task 6.3**: Door (문 열림)
 
-### Phase 7: 스테이지 구성
-- [ ] **Task 7.1**: Stage 1 구성 (튜토리얼, 레버 1개)
-- [ ] **Task 7.2**: Stage 2 구성 (2단 점프 해금, 레버 2개)
-- [ ] **Task 7.3**: Stage 3 구성 (시점 변환 해금, 레버 3개)
-- [ ] **Task 7.4**: Stage 4 구성 (고난이도, 레버 4개)
-- [ ] **Task 7.5**: Stage 5 구성 (보스전, 레버 5개)
+### Phase 7: 보스 시스템
+- [ ] **Task 7.1**: BossGate (모든 능력 필요)
+- [ ] **Task 7.2**: Boss (배경 보스)
+- [ ] **Task 7.3**: BossAttack 패턴
+- [ ] **Task 7.4**: Boss 처치 및 게임 클리어
 
-### Phase 8: 스프라이트 및 리소스
-- [ ] **Task 8.1**: 플레이어 스프라이트 제작
-- [ ] **Task 8.2**: 레버/문 스프라이트 제작
-- [ ] **Task 8.3**: 함정 스프라이트 제작
-- [ ] **Task 8.4**: 보스 스프라이트 제작
-- [ ] **Task 8.5**: 배경 및 타일 스프라이트 제작
+### Phase 8: UI 시스템
+- [ ] **Task 8.1**: DeathCounter (데스 횟수)
+- [ ] **Task 8.2**: AbilityUI (획득한 능력 표시)
+- [ ] **Task 8.3**: ScreenFade (맵 전환 화면 페이드)
+- [ ] **Task 8.4**: GameOver/Clear UI
 
-### Phase 9: 테스트 및 최적화
-- [ ] **Task 9.1**: 기능 테스트
-- [ ] **Task 9.2**: 성능 최적화
-- [ ] **Task 9.3**: 버그 수정
+### Phase 9: 맵 구성
+- [ ] **Task 9.1**: Map 1 (튜토리얼, 세이브포인트 1개)
+- [ ] **Task 9.2**: Map 2 (DoubleJump 구체, 세이브포인트 1개)
+- [ ] **Task 9.3**: Map 3 (PerspectiveShift 구체, 세이브포인트 1개)
+- [ ] **Task 9.4**: Map 4 (고난이도, 세이브포인트 1개)
+- [ ] **Task 9.5**: Boss Map (큼, BossGate)
+- [ ] **Task 9.6**: 포탈 연결 설정
 
-### Phase 10: 마무리
-- [ ] **Task 10.1**: 빌드 테스트
-- [ ] **Task 10.2**: 문서화
-- [ ] **Task 10.3**: Git 커밋 및 정리
+### Phase 10: 스프라이트 및 리소스
+- [ ] **Task 10.1**: 플레이어 스프라이트
+- [ ] **Task 10.2**: 능력 구체 스프라이트
+- [ ] **Task 10.3**: 포탈/체크포인트 스프라이트
+- [ ] **Task 10.4**: 함정 스프라이트
+- [ ] **Task 10.5**: 보스 스프라이트
+- [ ] **Task 10.6**: 타일/배경 스프라이트
+
+### Phase 11: 테스트 및 최적화
+- [ ] **Task 11.1**: 기능 테스트
+- [ ] **Task 11.2**: 성능 최적화
+- [ ] **Task 11.3**: 버그 수정
+
+### Phase 12: 마무리
+- [ ] **Task 12.1**: 빌드 테스트
+- [ ] **Task 12.2**: 문서화
+- [ ] **Task 12.3**: Git 커밋 및 정리
 
 ---
 
 ## 🎮 게임 디자인 상세
 
-### 스테이지별 구성
+### 능력 시스템
 
-| 스테이지 | 유형 | 레버 수 | 능력 | 특징 |
-|---------|------|---------|------|------|
-| 1 | 튜토리얼 | 1개 | 기본 | 이동/점프 학습 |
-| 2 | 퍼즐 | 2개 | 2단 점프 해금 | 높은 곳의 레버 |
-| 3 | 퍼즐 | 3개 | 시점 변환 해금 | 숨겨진 레버 발견 |
-| 4 | 고난이도 | 4개 | 모두 사용 | 복잡한 함정 배치 |
-| 5 | 보스전 | 5개 | 모두 사용 | 보스 기믹 공격 회피 |
+| 능력 | 위치 | 효과 |
+|------|------|------|
+| DoubleJump | Map 2 | 2단 점프 가능, 높은 곳 접근 |
+| PerspectiveShift | Map 3 | 숨겨진 발판/레버 표시 |
+
+### 맵 구성
+
+| 맵 | 크기 | 특징 | 세이브포인트 |
+|----|------|------|--------------|
+| Map 1 | 작음 | 튜토리얼, 기본 이동/점프 | 1개 |
+| Map 2 | 작음 | DoubleJump 구체 | 1개 |
+| Map 3 | 작음 | PerspectiveShift 구체, 숨겨진 구역 | 1개 |
+| Map 4 | 작음 | 고난이도, 모든 능력 필요 | 1개 |
+| Boss Map | 큼 | BossGate, 보스전 | 없음 |
+
+### 진행 흐름
+```
+[Map 1] → 포탈 → [Map 2] → DoubleJump 획득 → [Map 1] → 새 구역 → ...
+                                                        ↓
+                                          [Map 3] → PerspectiveShift 획득 → ...
+                                                        ↓
+                                          [Map 4] → 모든 능력 테스트 → Boss Map
+```
 
 ### 함정 종류
-1. **SpikeTrap**: 바닥/벽에 설치된 가시
+1. **SpikeTrap**: 바닥/벽에 설치된 가시 (즉사)
 2. **MovingPlatform**: 좌우 또는 상하로 움직이는 플랫폼
-3. **TimedTrap**: 특정 시간 간격으로 활성화되는 함정
-4. **PatrolEnemy**: 정해진 경로를 순찰하는 적
+3. **PatrolEnemy**: 정해진 경로를 순찰하는 적 (즉사)
 
-### 보스 스테이지 상세
-- **보스 체력**: 5칸 (레버 1개당 1칸 감소)
+### 보스 시스템
+- **입장 조건**: 모든 능력 획득
+- **BossGate**: 력이 없으면 진입 불가
 - **공격 패턴**:
-  - 투사체 발사 (예측 가능한 패턴)
-  - 지역 공격 (바닥에 경고 표시 후 공격)
-  - 소환물 (작은 적이나 장애물 소환)
-- **클리어 조건**: 모든 레버 작동 → 보스 체력 0 → 자동 클리어
+  - 투사체 발사
+  - 지역 공격
+  - 소환물
+- **클리어**: 보스 처치 시 게임 클리어
 
 ---
 
@@ -156,6 +193,7 @@ Assets/
 | 날짜 | 커밋 메시지 | 변경 내용 |
 |------|------------|-----------|
 | 2026-03-16 | feat: Implement DI Container system with RootContext architecture | DI Container 구현, Installer/RootContext 추가, AGENT.md 생성 |
+| 2026-03-16 | docs: Update TaskList for Metroidvania style | 메트로바니아 스타일로 구조 변경 |
 | 2026-03-12 | Initial commit: Project setup with folder structure | 폴더 구조 생성, TaskList.md 추가 |
 
 ---
@@ -167,6 +205,7 @@ Assets/
 - **중요**: 새로운 타입 추가 시 기존 코드 수정 금지 (OCP)
 - **참고**: ScriptableObject는 Inspector에서 데이터 수정 가능
 - **참고**: 복잡한 로직은 인터페이스 + DI로 분리
+- **참고**: 메트로바니아 = 완전 자유 탐색, Ability Gate로 진행 조절
 
 ---
 
