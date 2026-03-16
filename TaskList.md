@@ -199,6 +199,7 @@ Assets/
 
 | 날짜 | 커밋 메시지 | 변경 내용 |
 |------|------------|-----------|
+| 2026-03-16 | feat: Implement Player Animation System with Penguin assets | PlayerAnimator, 애니메이션 컨트롤러, PlayerController 통합, Animation_Setup_Guide 추가 |
 | 2026-03-16 | feat: Implement PlayerController with DI integration | PlayerController, IAbilityManager, IDeathManager, GameInstaller 추가 |
 | 2026-03-16 | feat: Implement DI Container system with RootContext architecture | DI Container 구현, Installer/RootContext 추가, AGENT.md 생성 |
 | 2026-03-16 | docs: Update TaskList for Metroidvania style | 메트로바니아 스타일로 구조 변경 |
