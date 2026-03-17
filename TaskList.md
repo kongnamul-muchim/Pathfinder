@@ -199,6 +199,7 @@ Assets/
 
 | 날짜 | 커밋 메시지 | 변경 내용 |
 |------|------------|-----------|
+| 2026-03-17 | feat: Implement Ability Chest system with extra lives | AbilityChest.cs, 목숨 시스템, Q키 상호작용, RewardType enum 추가 |
 | 2026-03-17 | feat: Remove PerspectiveShift ability and Hidden system | Hidden 시스템 제거 (Tilemap 호환성 문제), 능력 2개로 단순화 (DoubleJump, Dash) |
 | 2026-03-17 | feat: Implement Ability System with DoubleJump and Dash | AbilityManager, DoubleJump, Dash 능력 구현, DI 연동 |
 | 2026-03-16 | feat: Implement PlayerController with DI integration | PlayerController, IAbilityManager, IDeathManager, GameInstaller 추가 |
@@ -217,7 +218,9 @@ Assets/
 - **참고**: 복잡한 로직은 인터페이스 + DI로 분리
 - **참고**: 메트로바니아 = 완전 자유 탐색, Ability Gate로 진행 조절
 - **참고**: 플레이어 애니메이션은 Nine Pines Animation - Penguin 에셋 사용
+- **참고**: 능력 상자는 Q키로 상호작용 (E키는 Warp용으로 변경됨)
+- **참고**: 목숨 시스템 - 추가 목숨 획득 시 죽어도 리스폰, 상자에서 목숨 획득 가능
 
 ---
 
-*마지막 업데이트: 2026-03-17 (능력 시스템 구현 및 Hidden 시스템 제거)*
+*마지막 업데이트: 2026-03-17 (능력 상자 시스템 구현 및 목숨 시스템 추가)*
