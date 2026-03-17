@@ -25,8 +25,6 @@ namespace Pathfinder.Core.DI
 
             SceneManager.sceneLoaded += OnSceneLoaded;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-
-            Debug.Log("[DIContainerManager] Global container initialized");
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -36,8 +34,6 @@ namespace Pathfinder.Core.DI
             var container = new DIContainer();
             CurrentSceneContainer = container;
             _containers.Add(container);
-
-            Debug.Log($"[DIContainerManager] Scene container created for: {scene.name}");
 
             ExecuteInstallers(container);
         }
@@ -52,8 +48,6 @@ namespace Pathfinder.Core.DI
                 lastContainer.Dispose();
                 _containers.RemoveAt(_containers.Count - 1);
                 CurrentSceneContainer = _containers.Count > 1 ? _containers[_containers.Count - 1] : null;
-
-                Debug.Log($"[DIContainerManager] Scene container disposed for: {scene.name}");
             }
         }
 
@@ -63,7 +57,6 @@ namespace Pathfinder.Core.DI
 
             if (rootContexts.Length == 0)
             {
-                Debug.LogWarning("[DIContainerManager] No RootContext found in scene. Installers will be auto-collected.");
                 AutoCollectAndExecuteInstallers(container);
                 return;
             }
@@ -86,7 +79,7 @@ namespace Pathfinder.Core.DI
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[DIContainerManager] Installer failed: {installer.GetType().Name}\n{ex}");
+                    // DI 주입 실패 - 콘솔 출력 제거
                 }
             }
         }
@@ -116,7 +109,7 @@ namespace Pathfinder.Core.DI
 
             for (int i = _containers.Count - 1; i >= 0; i--)
             {
-                if (_containers[i].TryResolve(fullKey, out var result))
+                if (_containers[i].TryResolve<object>(fullKey, out var result))
                 {
                     return result;
                 }
@@ -147,11 +140,7 @@ namespace Pathfinder.Core.DI
         {
             EnsureInitialized();
 
-            if (instance == null)
-            {
-                Debug.LogWarning("[DIContainerManager] Cannot inject into null instance");
-                return;
-            }
+            if (instance == null) return;
 
             for (int i = _containers.Count - 1; i >= 0; i--)
             {
@@ -172,8 +161,8 @@ namespace Pathfinder.Core.DI
 
         public static void ClearGlobal()
         {
-            Global?.Clear();
-            Debug.Log("[DIContainerManager] Global container cleared");
+            Global?.Dispose();
+            Global = new DIContainer();
         }
 
         public static void ClearAll()
@@ -186,8 +175,6 @@ namespace Pathfinder.Core.DI
             Global = new DIContainer();
             _containers.Add(Global);
             CurrentSceneContainer = null;
-
-            Debug.Log("[DIContainerManager] All containers cleared");
         }
 
         private static void EnsureInitialized()

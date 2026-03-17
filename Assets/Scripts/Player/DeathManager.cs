@@ -1,4 +1,5 @@
 using Pathfinder.Core.DI;
+using Pathfinder.Core;
 using UnityEngine;
 
 namespace Pathfinder.Player
@@ -18,6 +19,21 @@ namespace Pathfinder.Player
         
         // DI 주입
         [Inject] private IAbilityManager _abilityManager;
+        [Inject] private ISaveManager _saveManager;
+        
+        private void Awake()
+        {
+            // DI가 실패했을 경우 씬에서 직접 찾기
+            if (_abilityManager == null)
+            {
+                _abilityManager = FindObjectOfType<AbilityManager>();
+            }
+            
+            if (_saveManager == null)
+            {
+                _saveManager = FindObjectOfType<SaveManager>();
+            }
+        }
         
         // 마지막 체크포인트 위치
         private Vector3 _lastCheckpoint;
@@ -44,18 +60,24 @@ namespace Pathfinder.Player
                 // 추가 목숨 소모
                 if (_abilityManager.ConsumeExtraLife())
                 {
-                    Debug.Log("[DeathManager] Extra life consumed! Respawning...");
                     Respawn();
                     return;
                 }
             }
             
-            // 추가 목숨이 없으면 정상 사망 처리
+            // 추가 목숨이 없으면 저장 데이터 로드 시도
             _deathCount++;
-            Debug.Log($"[DeathManager] Player died. Death count: {_deathCount}");
             
-            // 리스폰 시작
-            Respawn();
+            // 저장 데이터가 있으면 롤백
+            if (_saveManager != null && _saveManager.HasSaveData())
+            {
+                _saveManager.Load();
+            }
+            else
+            {
+                // 저장 데이터가 없으면 마지막 체크포인트나 시작 위치로 리스폰
+                Respawn();
+            }
         }
         
         /// <summary>
@@ -82,14 +104,8 @@ namespace Pathfinder.Player
                     rb.angularVelocity = 0f;
                 }
                 
-                Debug.Log($"[DeathManager] Respawned at {respawnPosition}");
-                
                 // 무적 상태 시작
                 StartCoroutine(InvincibilityCoroutine());
-            }
-            else
-            {
-                Debug.LogError("[DeathManager] Player not found!");
             }
             
             _isRespawning = false;
@@ -142,7 +158,6 @@ namespace Pathfinder.Player
         public void SetCheckpoint(Vector3 position)
         {
             _lastCheckpoint = position;
-            Debug.Log($"[DeathManager] Checkpoint set: {position}");
         }
         
         /// <summary>

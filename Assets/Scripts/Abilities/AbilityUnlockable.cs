@@ -125,10 +125,6 @@ namespace Pathfinder.Abilities
             {
                 _abilityManager.UnlockAbility(_abilityType);
             }
-            else
-            {
-                Debug.LogWarning("[AbilityUnlockable] AbilityManager not found!");
-            }
             
             // 이펙트 재생
             PlayCollectEffect();
@@ -138,8 +134,6 @@ namespace Pathfinder.Abilities
             
             // 이벤트 발행
             OnAbilityUnlocked?.Invoke(_abilityType);
-            
-            Debug.Log($"[AbilityUnlockable] Unlocked: {_abilityType}");
             
             // 파괴 또는 비활성화
             if (_destroyOnCollect)

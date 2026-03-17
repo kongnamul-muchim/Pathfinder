@@ -1,5 +1,5 @@
 using Pathfinder.Core.DI;
-using Pathfinder.Interfaces;
+using Pathfinder.Common;
 using Pathfinder.Player;
 using UnityEngine;
 
@@ -25,7 +25,11 @@ namespace Pathfinder.Abilities
         [SerializeField] private Sprite _openedSprite;
         
         [Tooltip("상호작용 프롬프트 텍스트")]
-        [SerializeField] private string _interactionText = "Open Chest (Q)";
+        [SerializeField] private string _interactionText = "Open Chest (E)";
+        
+        [Header("Size Settings")]
+        [Tooltip("스프라이트 크기 배율 (기본 1)")]
+        [SerializeField] private Vector2 _spriteScale = new Vector2(1f, 1f);
         
         // 컴포넌트
         private SpriteRenderer _spriteRenderer;
@@ -42,10 +46,22 @@ namespace Pathfinder.Abilities
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _collider = GetComponent<Collider2D>();
             
-            // ID가 비어있으면 경고
+            // DI가 안 되었으면 씬에서 찾기
+            if (_abilityManager == null)
+            {
+                var abilityManager = FindObjectOfType<AbilityManager>();
+                if (abilityManager != null)
+                {
+                    _abilityManager = abilityManager;
+                }
+            }
+            
+            // 스프라이트 크기 적용
+            transform.localScale = new Vector3(_spriteScale.x, _spriteScale.y, 1f);
+            
+            // ID가 비어있으면 자동 생성
             if (string.IsNullOrEmpty(_chestId))
             {
-                Debug.LogWarning($"[AbilityChest] Chest ID is empty on {gameObject.name}! Please set a unique ID.");
                 _chestId = $"{gameObject.name}_{GetInstanceID()}";
             }
             
@@ -92,8 +108,6 @@ namespace Pathfinder.Abilities
             
             // 보상 제공
             GiveReward();
-            
-            Debug.Log($"[AbilityChest] Opened! ID: {_chestId}, Reward: {_rewardType}");
         }
         
         /// <summary>
@@ -103,26 +117,58 @@ namespace Pathfinder.Abilities
         {
             if (_abilityManager == null)
             {
-                Debug.LogError("[AbilityChest] AbilityManager is null!");
                 return;
             }
+            
+            string rewardMessage = "";
             
             switch (_rewardType)
             {
                 case RewardType.DoubleJump:
                     _abilityManager.UnlockAbility(AbilityType.DoubleJump);
-                    Debug.Log("[AbilityChest] Reward: Double Jump unlocked!");
+                    rewardMessage = "Double Jump Get!";
                     break;
                     
                 case RewardType.Dash:
                     _abilityManager.UnlockAbility(AbilityType.Dash);
-                    Debug.Log("[AbilityChest] Reward: Dash unlocked!");
+                    rewardMessage = "Dash Get!";
                     break;
                     
                 case RewardType.ExtraLife:
                     _abilityManager.AddExtraLife();
-                    Debug.Log("[AbilityChest] Reward: Extra life added!");
+                    rewardMessage = "Extra Life +1!";
                     break;
+            }
+            
+            // 보상 팝업 표시
+            ShowRewardPopup(rewardMessage);
+        }
+        
+        /// <summary>
+        /// 보상 팝업 표시 - 플레이어 머리 위에 표시
+        /// </summary>
+        private void ShowRewardPopup(string message)
+        {
+            // 플레이어 찾기
+            var player = FindObjectOfType<PlayerController>();
+            if (player != null)
+            {
+                // 플레이어의 PlayerRewardPopup 찾기
+                var playerPopup = player.GetComponent<PlayerRewardPopup>();
+                if (playerPopup != null)
+                {
+                    playerPopup.ShowGenericReward(message);
+                }
+                else
+                {
+                    // 없으면 추가하고 실행
+                    playerPopup = player.gameObject.AddComponent<PlayerRewardPopup>();
+                    playerPopup.ShowGenericReward(message);
+                }
+            }
+            else
+            {
+                // 콘솔 출력 제거
             }
         }
         
@@ -170,7 +216,6 @@ namespace Pathfinder.Abilities
             {
                 _isOpened = false;
                 UpdateVisual();
-                Debug.Log($"[AbilityChest] Reset! ID: {_chestId}");
             }
         }
         
@@ -189,15 +234,5 @@ namespace Pathfinder.Abilities
             }
             #endif
         }
-    }
-    
-    /// <summary>
-    /// 보상 타입
-    /// </summary>
-    public enum RewardType
-    {
-        DoubleJump,
-        Dash,
-        ExtraLife
     }
 }

@@ -14,6 +14,7 @@ namespace Pathfinder.Player
         [SerializeField] private string _isJumpingParam = "IsJumping";
         [SerializeField] private string _isGroundedParam = "IsGrounded";
         [SerializeField] private string _triggerDeathParam = "Death";
+        [SerializeField] private string _triggerDashParam = "Dash";
         
         private Animator _animator;
         private SpriteRenderer _spriteRenderer;
@@ -107,6 +108,14 @@ namespace Pathfinder.Player
         public void TriggerDeath()
         {
             _animator?.SetTrigger(_triggerDeathParam);
+        }
+        
+        /// <summary>
+        /// 대쉬 애니메이션 트리거
+        /// </summary>
+        public void TriggerDash()
+        {
+            _animator?.SetTrigger(_triggerDashParam);
         }
         
         /// <summary>

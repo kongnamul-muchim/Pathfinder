@@ -42,20 +42,15 @@ namespace Pathfinder.Core.DI
         {
             foreach (var installer in _installers)
             {
-                if (installer == null)
-                {
-                    Debug.LogWarning($"[RootContext] Null installer reference on {gameObject.name}");
-                    continue;
-                }
+                if (installer == null) continue;
 
                 try
                 {
                     installer.Install(container);
-                    Debug.Log($"[RootContext] Executed installer: {installer.GetType().Name}");
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[RootContext] Installer failed: {installer.GetType().Name}\n{ex}");
+                    // DI 주입 실패 - 콘솔 출력 제거
                 }
             }
 
@@ -81,11 +76,9 @@ namespace Pathfinder.Core.DI
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[RootContext] Failed to inject into {behaviour.GetType().Name} on {behaviour.gameObject.name}\n{ex}");
+                    // DI 주입 실패 - 콘솔 출력 제거
                 }
             }
-
-            Debug.Log($"[RootContext] Injected {childBehaviours.Length} MonoBehaviours in {gameObject.name}");
         }
 
         /// <summary>

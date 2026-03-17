@@ -53,7 +53,6 @@ namespace Pathfinder.Player
             if (_unlockedAbilities.Contains(ability)) return;
             
             _unlockedAbilities.Add(ability);
-            Debug.Log($"[AbilityManager] Unlocked: {ability}");
             
             // 이벤트 발행
             OnAbilityUnlocked?.Invoke(ability);
@@ -117,7 +116,6 @@ namespace Pathfinder.Player
         public void AddExtraLife()
         {
             _extraLives++;
-            Debug.Log($"[AbilityManager] Extra life added! Total: {_extraLives}");
             OnExtraLivesChanged?.Invoke(_extraLives);
         }
         
@@ -130,7 +128,6 @@ namespace Pathfinder.Player
             if (_extraLives <= 0) return false;
             
             _extraLives--;
-            Debug.Log($"[AbilityManager] Extra life consumed! Remaining: {_extraLives}");
             OnExtraLivesChanged?.Invoke(_extraLives);
             return true;
         }

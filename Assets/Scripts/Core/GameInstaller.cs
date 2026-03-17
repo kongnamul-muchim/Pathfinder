@@ -1,6 +1,7 @@
 using Pathfinder.Core.DI;
 using Pathfinder.Player;
 using Pathfinder.World;
+using Pathfinder.Core;
 using UnityEngine;
 
 namespace Pathfinder.Core
@@ -12,88 +13,52 @@ namespace Pathfinder.Core
     {
         public override void Install(DIContainer container)
         {
-            // 능력 관리자 (싱글톤)
-            container.RegisterInstance<IAbilityManager>(new AbilityManager());
+            // 능력 관리자 (씬에서 찾거나 없으면 생성)
+            var abilityManager = UnityEngine.Object.FindObjectOfType<AbilityManager>();
+            if (abilityManager == null)
+            {
+                // Player 오브젝트 찾기
+                var player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null)
+                {
+                    abilityManager = player.GetComponent<AbilityManager>();
+                    if (abilityManager == null)
+                    {
+                        abilityManager = player.AddComponent<AbilityManager>();
+                    }
+                }
+                else
+                {
+                    // Player 태그가 없으면 AbilityManager를 가진 오브젝트 찾기
+                    abilityManager = UnityEngine.Object.FindObjectOfType<AbilityManager>();
+                }
+            }
             
-            // 사망 관리자 (싱글톤)
-            container.RegisterInstance<IDeathManager>(new DeathManager());
+            if (abilityManager != null)
+            {
+                container.RegisterInstance<IAbilityManager>(abilityManager);
+            }
+            
+            // 사망 관리자 (씬에서 찾아서 등록)
+            var deathManager = UnityEngine.Object.FindObjectOfType<DeathManager>();
+            if (deathManager != null)
+            {
+                container.RegisterInstance<IDeathManager>(deathManager);
+            }
             
             // 맵 관리자 (씬에서 찾아서 등록)
             var mapManager = UnityEngine.Object.FindObjectOfType<MapManager>();
             if (mapManager != null)
             {
                 container.RegisterInstance<IMapManager>(mapManager);
-                Debug.Log("[GameInstaller] MapManager registered");
-            }
-            else
-            {
-                Debug.LogError("[GameInstaller] MapManager not found in scene!");
             }
             
-            Debug.Log("[GameInstaller] Services registered");
-        }
-    }
-    
-    /// <summary>
-    /// 능력 관리자 구현
-    /// </summary>
-    public class AbilityManager : IAbilityManager
-    {
-        private System.Collections.Generic.HashSet<AbilityType> _unlockedAbilities = new();
-        
-        public bool HasAbility(AbilityType ability)
-        {
-            return _unlockedAbilities.Contains(ability);
-        }
-        
-        public void UnlockAbility(AbilityType ability)
-        {
-            _unlockedAbilities.Add(ability);
-            Debug.Log($"[AbilityManager] Unlocked: {ability}");
-        }
-        
-        public bool HasAllAbilities()
-        {
-            return _unlockedAbilities.Contains(AbilityType.DoubleJump) && 
-                   _unlockedAbilities.Contains(AbilityType.PerspectiveShift);
-        }
-    }
-    
-    /// <summary>
-    /// 사망 관리자 구현
-    /// </summary>
-    public class DeathManager : IDeathManager
-    {
-        private Vector3 _lastCheckpoint;
-        private int _deathCount = 0;
-        
-        public void OnPlayerDeath()
-        {
-            _deathCount++;
-            Debug.Log($"[DeathManager] Player died. Death count: {_deathCount}");
-            Respawn();
-        }
-        
-        public void Respawn()
-        {
-            // 플레이어 찾아서 리스폰
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
+            // 저장 관리자 (씬에서 찾아서 등록)
+            var saveManager = UnityEngine.Object.FindObjectOfType<SaveManager>();
+            if (saveManager != null)
             {
-                player.transform.position = _lastCheckpoint != Vector3.zero ? _lastCheckpoint : Vector3.zero;
-                Debug.Log($"[DeathManager] Respawned at {_lastCheckpoint}");
+                container.RegisterInstance<ISaveManager>(saveManager);
             }
-        }
-        
-        public Vector3 GetLastCheckpoint()
-        {
-            return _lastCheckpoint;
-        }
-        
-        public void SetCheckpoint(Vector3 position)
-        {
-            _lastCheckpoint = position;
-            Debug.Log($"[DeathManager] Checkpoint set: {position}");
         }
     }
 }

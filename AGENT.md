@@ -1,5 +1,30 @@
 # Agent Guidelines
 
+## 📚 문서 참조 가이드
+
+### 상황별 참조 문서
+
+**코어 아키텍처 작업 시:**
+- `DI_Library.md` - DI Container 구현 구조
+- `SOLID_Coding_Standard.md` - 코딩 표준
+
+**게임 시스템 작업 시:**
+- `Docs_WarpPoint.md` - 워프/체크포인트 시스템
+- `WarpPoint_Setup_Guide.md` - 설정 방법
+
+**Unity 씬 작업 시:**
+- `Unity_Scene_Setup_Guide.md` - 씬 구성
+- `Animation_Setup_Guide.md` - 애니메이션 설정
+
+**타일맵 작업 시:**
+- **⚠️ 코드 생성 금지** - Unity Tile Palette 사용
+- `Docs_TilemapGenerators.md` - 삭제된 생성기 코드 (참조용)
+
+**진행 상황 확인:**
+- `TaskList.md` - 작업 목록
+
+---
+
 ## DI Container Implementation Reference
 
 When implementing DI Container features, refer to `DI_Library.md` for the core structure and patterns.
@@ -79,6 +104,17 @@ Assets/Scripts/Core/DI/
 - Clear containers between tests: `container.Clear()`
 - Not thread-safe - use one container per test
 - Optional dependencies useful for test doubles
+
+---
+
+## ⚠️ 타일맵 작업 규칙
+
+**코드로 자동 생성하지 않음**
+- 모든 타일맵은 Unity 에디터에서 수동으로 배치
+- Tile Palette 사용
+- 자동 생성기는 삭제됨: `Docs_TilemapGenerators.md` 참조
+
+---
 
 ## General Development Notes
 

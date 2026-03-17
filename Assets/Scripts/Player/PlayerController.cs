@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Pathfinder.Abilities;
 using Pathfinder.Core.DI;
-using Pathfinder.Interfaces;
+using Pathfinder.Common;
 using Pathfinder.UI;
 using Pathfinder.World;
 
@@ -34,7 +35,7 @@ namespace Pathfinder.Player
         [SerializeField] private LayerMask _wallLayer;
         
         [Header("Jump")]
-        [SerializeField] private float _jumpForce = 10f;
+        [SerializeField] private float _jumpForce = 7f;
         [SerializeField] private LayerMask _groundLayer;
         [SerializeField] private Transform _groundCheck;
         [SerializeField] private float _groundCheckRadius = 0.2f;
@@ -47,10 +48,10 @@ namespace Pathfinder.Player
         [SerializeField] private bool _enableDash = true;
         
         [Tooltip("대쉬 힘")]
-        [SerializeField] private float _dashForce = 15f;
+        [SerializeField] private float _dashForce = 20f;
         
         [Tooltip("대쉬 지속 시간")]
-        [SerializeField] private float _dashDuration = 0.2f;
+        [SerializeField] private float _dashDuration = 0.25f;
         
         [Tooltip("대쉬 쿨타임")]
         [SerializeField] private float _dashCooldown = 1f;
@@ -75,6 +76,7 @@ namespace Pathfinder.Player
         private InputAction _moveAction;
         private InputAction _jumpAction;
         private InputAction _interactAction;
+        private InputAction _forceDeathAction;
         
         // 상호작용
         private InteractionPromptUI _currentPrompt;
@@ -90,6 +92,7 @@ namespace Pathfinder.Player
         // 더블점프
         private int _jumpCount = 0;
         private int _maxJumpCount = 1; // 기본 1, 더블점프 시 2
+        private bool _isDoubleJump = false;
         
         // 대쉬
         private bool _canDash = true;
@@ -97,7 +100,8 @@ namespace Pathfinder.Player
         private float _lastDashTime = -999f;
         private float _lastLeftTapTime = -999f;
         private float _lastRightTapTime = -999f;
-        private int _lastTapDirection = 0;
+        private bool _lastLeftKeyState = false;
+        private bool _lastRightKeyState = false;
         
         private void Awake()
         {
@@ -112,8 +116,11 @@ namespace Pathfinder.Player
             
             _jumpAction = new InputAction("Jump", binding: "<Keyboard>/space");
             
-            // 상호작용 입력 설정 (Q키로 변경)
-            _interactAction = new InputAction("Interact", binding: "<Keyboard>/q");
+            // 상호작용 입력 설정 (E키)
+            _interactAction = new InputAction("Interact", binding: "<Keyboard>/e");
+            
+            // 강제 사망 입력 설정 (P키 - 테스트용)
+            _forceDeathAction = new InputAction("ForceDeath", binding: "<Keyboard>/p");
             
             // GroundCheck가 없으면 자동 생성
             if (_groundCheck == null)
@@ -136,6 +143,7 @@ namespace Pathfinder.Player
             _moveAction?.Enable();
             _jumpAction?.Enable();
             _interactAction?.Enable();
+            _forceDeathAction?.Enable();
         }
         
         private void OnDisable()
@@ -143,6 +151,7 @@ namespace Pathfinder.Player
             _moveAction?.Disable();
             _jumpAction?.Disable();
             _interactAction?.Disable();
+            _forceDeathAction?.Disable();
         }
         
         private void OnDestroy()
@@ -150,11 +159,21 @@ namespace Pathfinder.Player
             _moveAction?.Dispose();
             _jumpAction?.Dispose();
             _interactAction?.Dispose();
+            _forceDeathAction?.Dispose();
         }
         
         private void Start()
         {
-            // RootContext에 의해 DI 주입됨
+            // DI 주입 확인 및 복구
+            if (_abilityManager == null)
+            {
+                _abilityManager = FindObjectOfType<AbilityManager>();
+            }
+            
+            if (_deathManager == null)
+            {
+                _deathManager = FindObjectOfType<DeathManager>();
+            }
         }
         
         private void Update()
@@ -171,7 +190,25 @@ namespace Pathfinder.Player
             // 상호작용 입력 처리
             if (_interactAction.WasPressedThisFrame() && _currentInteractable != null)
             {
-                _currentInteractable.OnInteract();
+                // 파괴된 오브젝트인지 확인
+                try
+                {
+                    _currentInteractable.OnInteract();
+                }
+                catch (MissingReferenceException)
+                {
+                    _currentInteractable = null;
+                    if (_currentPrompt != null)
+                    {
+                        _currentPrompt.Hide();
+                    }
+                }
+            }
+            
+            // 강제 사망 입력 처리 (P키 - 테스트용)
+            if (_forceDeathAction.WasPressedThisFrame())
+            {
+                Die();
             }
             
             // 지면 체크
@@ -199,6 +236,9 @@ namespace Pathfinder.Player
         {
             if (!_jumpAction.WasPressedThisFrame()) return;
             
+            // Dash 중에는 점프 불가
+            if (_isDashing) return;
+            
             // 지면에 있으면 기본 점프
             if (_isGrounded)
             {
@@ -220,9 +260,9 @@ namespace Pathfinder.Player
             // 더블점프 가능 여부 체크
             if (_jumpCount < _maxJumpCount)
             {
+                _isDoubleJump = _jumpCount >= 1; // 1단 점프 후면 더블점프
                 _jumpRequested = true;
                 _jumpCount++;
-                Debug.Log($"[PlayerController] DoubleJump! Count: {_jumpCount}/{_maxJumpCount}");
             }
         }
         
@@ -235,36 +275,44 @@ namespace Pathfinder.Player
             if (!_canDash || _isDashing) return;
             
             float currentTime = Time.time;
-            int currentDirection = 0;
             
-            // 왼쪽 방향키 체크
-            if (_horizontalInput < -0.5f)
+            // 현재 키 상태 확인
+            bool leftKeyPressed = _horizontalInput < -0.5f;
+            bool rightKeyPressed = _horizontalInput > 0.5f;
+            
+            // 왼쪽 키가 방금 눌림 (이전에는 안 려있었고 지금은 눌려있음)
+            if (leftKeyPressed && !_lastLeftKeyState)
             {
-                currentDirection = -1;
                 // 이전 탭이 왼쪽이었고 시간 내에 다시 눌렀는지 체크
-                if (_lastTapDirection == -1 && currentTime - _lastLeftTapTime < _doubleTapTime)
+                if (currentTime - _lastLeftTapTime < _doubleTapTime)
                 {
                     StartCoroutine(DashCoroutine(-1));
-                    _lastTapDirection = 0; // 리셋
-                    return;
+                    _lastLeftTapTime = -999f; // 리셋
                 }
-                _lastLeftTapTime = currentTime;
-            }
-            // 오른쪽 방향키 체크
-            else if (_horizontalInput > 0.5f)
-            {
-                currentDirection = 1;
-                // 이전 탭이 오른쪽이었고 시간 내에 다시 눌렀는지 체크
-                if (_lastTapDirection == 1 && currentTime - _lastRightTapTime < _doubleTapTime)
+                else
                 {
-                    StartCoroutine(DashCoroutine(1));
-                    _lastTapDirection = 0; // 리셋
-                    return;
+                    _lastLeftTapTime = currentTime;
                 }
-                _lastRightTapTime = currentTime;
             }
             
-            _lastTapDirection = currentDirection;
+            // 오른쪽 키가 방금 눌림
+            if (rightKeyPressed && !_lastRightKeyState)
+            {
+                // 이전 탭이 오른쪽이었고 시간 내에 다시 눌렀는지 체크
+                if (currentTime - _lastRightTapTime < _doubleTapTime)
+                {
+                    StartCoroutine(DashCoroutine(1));
+                    _lastRightTapTime = -999f; // 리셋
+                }
+                else
+                {
+                    _lastRightTapTime = currentTime;
+                }
+            }
+            
+            // 키 상태 저장
+            _lastLeftKeyState = leftKeyPressed;
+            _lastRightKeyState = rightKeyPressed;
         }
         
         /// <summary>
@@ -275,20 +323,25 @@ namespace Pathfinder.Player
             _isDashing = true;
             _canDash = false;
             
+            // 대쉬 애니메이션 시작
+            _playerAnimator?.TriggerDash();
+            
             // 대쉬 시작
             float originalGravity = _rb.gravityScale;
-            _rb.gravityScale = 0; // 중력 임시 제거
-            _rb.linearVelocity = new Vector2(direction * _dashForce, 0);
             
-            Debug.Log($"[PlayerController] Dash started! Direction: {direction}");
-            
-            yield return new WaitForSeconds(_dashDuration);
-            
-            // 대쉬 종료
-            _rb.gravityScale = originalGravity;
-            _isDashing = false;
-            
-            Debug.Log($"[PlayerController] Dash ended. Cooldown: {_dashCooldown}s");
+            try
+            {
+                _rb.gravityScale = 0; // 중력 임시 제거
+                _rb.linearVelocity = new Vector2(direction * _dashForce, 0);
+                
+                yield return new WaitForSeconds(_dashDuration);
+            }
+            finally
+            {
+                // 항상 중력 복구 (예외 발생 시에도)
+                _rb.gravityScale = originalGravity;
+                _isDashing = false;
+            }
             
             // 쿨타임 대기
             yield return new WaitForSeconds(_dashCooldown);
@@ -297,7 +350,6 @@ namespace Pathfinder.Player
             if (_isGrounded)
             {
                 _canDash = true;
-                Debug.Log("[PlayerController] Dash reset (grounded)");
             }
         }
         
@@ -336,28 +388,38 @@ namespace Pathfinder.Player
             {
                 Vector2 velocity = _rb.linearVelocity;
                 
-                // 경사로 이동 처리
-                if (_useSlopeMovement && _isGrounded)
+                // Dash 중에는 velocity를 직접 설정 (Dash 코루틴에서 처리)
+                // 그 외에는 수평 이동만 처리
+                if (!_isDashing)
                 {
-                    velocity = GetSlopeMovementVelocity();
+                    // 경사로 이동 처리
+                    if (_useSlopeMovement && _isGrounded)
+                    {
+                        velocity = GetSlopeMovementVelocity();
+                    }
+                    else
+                    {
+                        // 일반 수평 이동 (Y축은 건드리지 않음)
+                        velocity.x = _horizontalInput * _moveSpeed;
+                    }
+                    
+                    _rb.linearVelocity = velocity;
                 }
-                else
-                {
-                    // 일반 수평 이동
-                    velocity.x = _horizontalInput * _moveSpeed;
-                }
-                
-                _rb.linearVelocity = velocity;
             }
             else
             {
-                // 벽에 닿았을 때는 X축 이동 멈춤, Y축은 자유롭게 (미끄러짐)
+                // 벽에 닿았을 때는 X축 이동 멈춤
                 Vector2 velocity = _rb.linearVelocity;
                 velocity.x = 0;
-                // 벽에 붙어있을 때 아래로 미끄러지게
-                if (!_isGrounded && velocity.y > -_wallSlideSpeed)
+                // Y축은 점프 중일 때 건드리지 않음
+                if (!_isGrounded && velocity.y > 0)
                 {
-                    velocity.y = -_wallSlideSpeed;
+                    // 점프 중일 때는 Y축 유지
+                }
+                else if (!_isGrounded && velocity.y < 0)
+                {
+                    // 낙하 중일 때만 미끄러짐 적용
+                    velocity.y = Mathf.Max(velocity.y, -_wallSlideSpeed);
                 }
                 _rb.linearVelocity = velocity;
             }
@@ -371,6 +433,15 @@ namespace Pathfinder.Player
             // 점프
             if (_jumpRequested)
             {
+                // 더블점프일 때는 Y축 velocity 리셋 (가속도 누적 방지)
+                if (_isDoubleJump)
+                {
+                    Vector2 velocity = _rb.linearVelocity;
+                    velocity.y = 0;
+                    _rb.linearVelocity = velocity;
+                    _isDoubleJump = false;
+                }
+                
                 _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
                 _jumpRequested = false;
             }
@@ -551,23 +622,43 @@ namespace Pathfinder.Player
         {
             Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, _interactionRadius);
             
-            Debug.Log($"[PlayerController] Found {colliders.Length} colliders in range");
-            
             IInteractable nearestInteractable = null;
             float nearestDistance = float.MaxValue;
             
             foreach (var collider in colliders)
             {
-                Debug.Log($"[PlayerController] Checking collider: {collider.name}");
+                // 파괴된 오브젝트는 스킵
+                if (collider == null || collider.gameObject == null)
+                    continue;
                 
-                // IInteractable 인터페이스 찾기 (GetComponent 직접 호출)
+                // IInteractable 인터페이스 찾기
+                IInteractable interactable = null;
+                
+                // WarpPoint 확인
                 var warpPoint = collider.GetComponent<WarpPoint>();
-                IInteractable interactable = warpPoint as IInteractable;
+                if (warpPoint != null)
+                {
+                    interactable = warpPoint as IInteractable;
+                }
+                
+                // AbilityChest 확인
+                if (interactable == null)
+                {
+                    var abilityChest = collider.GetComponent<AbilityChest>();
+                    if (abilityChest != null)
+                    {
+                        interactable = abilityChest as IInteractable;
+                    }
+                }
+                
+                // 직접 IInteractable 컴포넌트도 확인
+                if (interactable == null)
+                {
+                    interactable = collider.GetComponent<IInteractable>();
+                }
                 
                 if (interactable != null)
                 {
-                    Debug.Log($"[PlayerController] Found IInteractable on {collider.name}, CanInteract: {interactable.CanInteract()}");
-                    
                     if (interactable.CanInteract())
                     {
                         float distance = Vector2.Distance(transform.position, collider.transform.position);
@@ -578,17 +669,11 @@ namespace Pathfinder.Player
                         }
                     }
                 }
-                else
-                {
-                    Debug.Log($"[PlayerController] No IInteractable found on {collider.name}");
-                }
             }
             
             // 상호작용 가능한 오브젝트가 변경되었을 때
             if (nearestInteractable != _currentInteractable)
             {
-                Debug.Log($"[PlayerController] Interactable changed from {(_currentInteractable != null ? "something" : "null")} to {(nearestInteractable != null ? "something" : "null")}");
-                
                 // 이전 프롬프트 숨김
                 if (_currentPrompt != null)
                 {
@@ -610,24 +695,16 @@ namespace Pathfinder.Player
         /// </summary>
         private void ShowInteractionPrompt(IInteractable interactable)
         {
-            Debug.Log($"[PlayerController] ShowInteractionPrompt called, prefab: {(_interactionPromptPrefab != null ? "not null" : "NULL")}");
-            
-            if (_interactionPromptPrefab == null)
-            {
-                Debug.LogError("[PlayerController] InteractionPromptPrefab is NULL! Please assign it in the Inspector.");
-                return;
-            }
+            if (_interactionPromptPrefab == null) return;
             
             // 프롬프트 UI가 없으면 생성
             if (_currentPrompt == null)
             {
-                Debug.Log("[PlayerController] Creating new prompt instance");
                 _currentPrompt = Instantiate(_interactionPromptPrefab);
             }
             
             // 프롬프트 표시 - 플레이어 머리 위에 표시
             var text = interactable.GetInteractionText();
-            Debug.Log($"[PlayerController] Showing prompt on player head, text: {text}");
             _currentPrompt.Show(transform, text);
         }
         
