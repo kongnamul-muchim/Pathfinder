@@ -13,6 +13,12 @@ namespace Pathfinder.Player
         /// 능력 해금 이벤트
         /// </summary>
         event System.Action<AbilityType> OnAbilityUnlocked;
+        
+        // 목숨 관리
+        int GetExtraLives();
+        void AddExtraLife();
+        bool ConsumeExtraLife();
+        event System.Action<int> OnExtraLivesChanged;
     }
     
     public enum AbilityType
