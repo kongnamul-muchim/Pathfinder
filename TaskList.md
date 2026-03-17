@@ -68,17 +68,17 @@ Assets/
   - [x] **Subtask 2.5.4**: 방향 전환 (좌우) 구현 (Sprite Flip)
   - [ ] **Subtask 2.5.5**: Penguin 스프라이트 Player 프리팹에 적용 (Unity에서 수동 설정)
 
-### Phase 3: 메트로바니아 시스템
-- [ ] **Task 3.1**: MapManager (맵 전환 관리)
-- [ ] **Task 3.2**: Portal (맵 간 이동, 검은 화면 전환)
-- [ ] **Task 3.3**: Checkpoint (세이브포인트, 리스폰 위치)
-- [ ] **Task 3.4**: AbilityUnlockable (능력 구체)
-- [ ] **Task 3.5**: AbilityGate (능력 요구 구역)
-- [ ] **Task 3.6**: CameraController (맵 전환 시 카메라)
+### Phase 3: 메트로바니아 시스템 ✅
+- [x] **Task 3.1**: MapManager (맵 전환 관리)
+- [x] **Task 3.2**: Portal (맵 간 이동, 검은 화면 전환 - ScreenFade 연동 필요)
+- [x] **Task 3.3**: Checkpoint (세이브포인트, 리스폰 위치)
+- [x] **Task 3.4**: AbilityUnlockable (능력 구체)
+- [x] **Task 3.5**: AbilityGate 삭제 - 능력은 플랫포밍 난이도로 해결 (차단이 아닌 도달 가능성)
+- [x] **Task 3.6**: CameraController (맵 전환 시 카메라)
 
-### Phase 4: 능력 구현
-- [ ] **Task 4.1**: DoubleJump 능력
-- [ ] **Task 4.2**: PerspectiveShift 능력 (숨겨진 오브젝트 표시)
+### Phase 4: 능력 구현 ✅
+- [x] **Task 4.1**: DoubleJump 능력
+- [x] **Task 4.2**: Dash 능력 (공중/지상, 더블탭 입력)
 
 ### Phase 5: 함정 시스템
 - [ ] **Task 5.1**: ITrap 인터페이스 정의
@@ -138,7 +138,7 @@ Assets/
 | 능력 | 위치 | 효과 |
 |------|------|------|
 | DoubleJump | Map 2 | 2단 점프 가능, 높은 곳 접근 |
-| PerspectiveShift | Map 3 | 숨겨진 발판/레버 표시 |
+| Dash | Map 3 | 빠른 이동, 방향키 더블탭 |
 
 ### 맵 구성
 
@@ -146,15 +146,15 @@ Assets/
 |----|------|------|--------------|
 | Map 1 | 작음 | 튜토리얼, 기본 이동/점프 | 1개 |
 | Map 2 | 작음 | DoubleJump 구체 | 1개 |
-| Map 3 | 작음 | PerspectiveShift 구체, 숨겨진 구역 | 1개 |
-| Map 4 | 작음 | 고난이도, 모든 능력 필요 | 1개 |
+| Map 3 | 작음 | Dash 구체, 탐색 구역 | 1개 |
+| Map 4 | 작음 | 고난이도, DoubleJump+Dash 필요 | 1개 |
 | Boss Map | 큼 | BossGate, 보스전 | 없음 |
 
 ### 진행 흐름
 ```
 [Map 1] → 포탈 → [Map 2] → DoubleJump 획득 → [Map 1] → 새 구역 → ...
                                                         ↓
-                                          [Map 3] → PerspectiveShift 획득 → ...
+                                          [Map 3] → Dash 획득 → ...
                                                         ↓
                                           [Map 4] → 모든 능력 테스트 → Boss Map
 ```
@@ -165,7 +165,7 @@ Assets/
 3. **PatrolEnemy**: 정해진 경로를 순찰하는 적 (즉사)
 
 ### 보스 시스템
-- **입장 조건**: 모든 능력 획득
+- **입장 조건**: DoubleJump + Dash 능력 획득
 - **BossGate**: 력이 없으면 진입 불가
 - **공격 패턴**:
   - 투사체 발사
@@ -199,7 +199,8 @@ Assets/
 
 | 날짜 | 커밋 메시지 | 변경 내용 |
 |------|------------|-----------|
-| 2026-03-16 | feat: Implement Player Animation System with Penguin assets | PlayerAnimator, 애니메이션 컨트롤러, PlayerController 통합, Animation_Setup_Guide 추가 |
+| 2026-03-17 | feat: Remove PerspectiveShift ability and Hidden system | Hidden 시스템 제거 (Tilemap 호환성 문제), 능력 2개로 단순화 (DoubleJump, Dash) |
+| 2026-03-17 | feat: Implement Ability System with DoubleJump and Dash | AbilityManager, DoubleJump, Dash 능력 구현, DI 연동 |
 | 2026-03-16 | feat: Implement PlayerController with DI integration | PlayerController, IAbilityManager, IDeathManager, GameInstaller 추가 |
 | 2026-03-16 | feat: Implement DI Container system with RootContext architecture | DI Container 구현, Installer/RootContext 추가, AGENT.md 생성 |
 | 2026-03-16 | docs: Update TaskList for Metroidvania style | 메트로바니아 스타일로 구조 변경 |
@@ -219,4 +220,4 @@ Assets/
 
 ---
 
-*마지막 업데이트: 2026-03-16 (Task 2.5 애니메이션 시스템 추가)*
+*마지막 업데이트: 2026-03-17 (능력 시스템 구현 및 Hidden 시스템 제거)*
