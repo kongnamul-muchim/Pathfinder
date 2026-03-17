@@ -2,6 +2,7 @@ using System.Collections;
 using Pathfinder.Core.DI;
 using Pathfinder.Player;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Pathfinder.World
 {
@@ -9,7 +10,7 @@ namespace Pathfinder.World
     /// 워프 포인트 - 체크포인트 저장 + 맵 순간이동 기능 통합
     /// 플레이어가 E키로 활성화하면 체크포인트 저장 후 목표 맵으로 이동
     /// </summary>
-    public class WarpPoint : MonoBehaviour
+    public class WarpPoint : MonoBehaviour, ICheckpoint
     {
         [Header("Warp Point Settings")]
         [Tooltip("이 워프 포인트의 고유 ID")]
@@ -20,6 +21,9 @@ namespace Pathfinder.World
         
         [Tooltip("목표 맵 내 도착할 워프 포인트 ID (비어있으면 스폰 포인트)")]
         [SerializeField] private string _targetWarpPointId;
+        
+        [Tooltip("도착 위치 (비어있으면 _targetWarpPointId의 위치나 스폰 포인트 사용)")]
+        [SerializeField] private Transform _warpTarget;
         
         [Tooltip("초기 활성화 상태 (시작 지점용)")]
         [SerializeField] private bool _startActivated = false;
@@ -34,10 +38,17 @@ namespace Pathfinder.World
         [Tooltip("활성화 시 이펙트 프리팹")]
         [SerializeField] private GameObject _activationEffect;
         
-        [Header("Interaction")]
-        [Tooltip("상호작용 키 (기본: E)")]
-        [SerializeField] private KeyCode _interactionKey = KeyCode.E;
+        [Header("Outline Effect")]
+        [Tooltip("상호작용 가능 시 테두리 색상")]
+        [SerializeField] private Color _outlineColor = new Color(1f, 0.8f, 0f, 0.8f);
         
+        [Tooltip("테두리 두께 (스케일 배율)")]
+        [SerializeField] private float _outlineScale = 1.15f;
+        
+        [Tooltip("테두리 스프라이트 (비어있으면 본체 스프라이트 사용)")]
+        [SerializeField] private Sprite _outlineSprite;
+        
+        [Header("Interaction")]
         [Tooltip("상호작용 가능 거리")]
         [SerializeField] private float _interactionRadius = 2f;
         
@@ -52,9 +63,15 @@ namespace Pathfinder.World
         
         // 컴포넌트
         private SpriteRenderer _spriteRenderer;
+        private SpriteRenderer _outlineRenderer;
+        private Transform _outlineTransform;
+        
+        // Input System
+        private InputAction _interactAction;
         
         // 상수
         private const string PLAYER_TAG = "Player";
+        private const string OUTLINE_NAME = "Outline";
         
         // 이벤트
         public delegate void WarpPointEvent(string warpPointId, Vector3 position);
@@ -65,8 +82,10 @@ namespace Pathfinder.World
         private void Awake()
         {
             InitializeComponents();
+            SetupOutline();
             SetupCollider();
             GenerateIdIfEmpty();
+            SetupInput();
         }
         
         private void Start()
@@ -74,9 +93,45 @@ namespace Pathfinder.World
             InitializeState();
         }
         
-        private void Update()
+        private void OnEnable()
         {
-            HandleInput();
+            _interactAction?.Enable();
+        }
+        
+        private void OnDisable()
+        {
+            _interactAction?.Disable();
+        }
+        
+        private void OnDestroy()
+        {
+            if (_interactAction != null)
+            {
+                _interactAction.performed -= OnInteractPerformed;
+                _interactAction.Disable();
+            }
+        }
+        
+        /// <summary>
+        /// Input System 설정
+        /// </summary>
+        private void SetupInput()
+        {
+            // E키 입력 액션 생성
+            _interactAction = new InputAction("Interact", binding: "<Keyboard>/e");
+            _interactAction.performed += OnInteractPerformed;
+            _interactAction.Enable();
+        }
+        
+        /// <summary>
+        /// 상호작용 입력 처리
+        /// </summary>
+        private void OnInteractPerformed(InputAction.CallbackContext context)
+        {
+            if (_isPlayerInRange && !_isWarping)
+            {
+                StartCoroutine(WarpSequence());
+            }
         }
         
         /// <summary>
@@ -91,6 +146,39 @@ namespace Pathfinder.World
             }
             
             UpdateVisual();
+        }
+        
+        /// <summary>
+        /// 테두리 효과 설정 (노란색 아웃라인)
+        /// </summary>
+        private void SetupOutline()
+        {
+            // 기존 Outline 찾기 또는 생성
+            _outlineTransform = transform.Find(OUTLINE_NAME);
+            if (_outlineTransform == null)
+            {
+                GameObject outlineObj = new GameObject(OUTLINE_NAME);
+                outlineObj.transform.SetParent(transform);
+                outlineObj.transform.localPosition = Vector3.zero;
+                _outlineTransform = outlineObj.transform;
+            }
+            
+            _outlineRenderer = _outlineTransform.GetComponent<SpriteRenderer>();
+            if (_outlineRenderer == null)
+            {
+                _outlineRenderer = _outlineTransform.gameObject.AddComponent<SpriteRenderer>();
+            }
+            
+            // 아웃라인 스프라이트 설정
+            _outlineRenderer.sprite = _outlineSprite != null ? _outlineSprite : _spriteRenderer.sprite;
+            _outlineRenderer.color = _outlineColor;
+            _outlineRenderer.sortingOrder = _spriteRenderer.sortingOrder - 1; // 본체 뒤에
+            
+            // 스케일 설정 (테두리 두께)
+            _outlineTransform.localScale = Vector3.one * _outlineScale;
+            
+            // 처음에는 숨김
+            _outlineRenderer.enabled = false;
         }
         
         /// <summary>
@@ -134,17 +222,6 @@ namespace Pathfinder.World
         }
         
         /// <summary>
-        /// 입력 처리
-        /// </summary>
-        private void HandleInput()
-        {
-            if (_isPlayerInRange && !_isWarping && Input.GetKeyDown(_interactionKey))
-            {
-                StartCoroutine(WarpSequence());
-            }
-        }
-        
-        /// <summary>
         /// 트리거 진입
         /// </summary>
         private void OnTriggerEnter2D(Collider2D other)
@@ -152,6 +229,7 @@ namespace Pathfinder.World
             if (other.CompareTag(PLAYER_TAG))
             {
                 _isPlayerInRange = true;
+                ShowOutline();
                 ShowInteractionPrompt();
             }
         }
@@ -164,7 +242,30 @@ namespace Pathfinder.World
             if (other.CompareTag(PLAYER_TAG))
             {
                 _isPlayerInRange = false;
+                HideOutline();
                 HideInteractionPrompt();
+            }
+        }
+        
+        /// <summary>
+        /// 테두리 표시
+        /// </summary>
+        private void ShowOutline()
+        {
+            if (_outlineRenderer != null)
+            {
+                _outlineRenderer.enabled = true;
+            }
+        }
+        
+        /// <summary>
+        /// 테두리 숨김
+        /// </summary>
+        private void HideOutline()
+        {
+            if (_outlineRenderer != null)
+            {
+                _outlineRenderer.enabled = false;
             }
         }
         
@@ -173,8 +274,7 @@ namespace Pathfinder.World
         /// </summary>
         private void ShowInteractionPrompt()
         {
-            // TODO: UI 매니저와 연동하여 E키 표시
-            Debug.Log($"[WarpPoint] Press '{_interactionKey}' to activate {_warpPointId}");
+            Debug.Log($"[WarpPoint] Press 'E' to activate {_warpPointId}");
         }
         
         /// <summary>
@@ -288,17 +388,28 @@ namespace Pathfinder.World
         /// </summary>
         private Vector3 GetTargetPosition()
         {
-            // 목표 워프 포인트가 지정된 경우
+            // 1. 직접 지정된 도착 위치가 있으면 우선 사용
+            if (_warpTarget != null)
+            {
+                return _warpTarget.position;
+            }
+            
+            // 2. 목표 워프 포인트가 지정된 경우
             if (!string.IsNullOrEmpty(_targetWarpPointId))
             {
                 WarpPoint targetWarp = FindTargetWarpPoint(_targetWarpPointId);
                 if (targetWarp != null)
                 {
+                    // 대상 워프 포인트의 _warpTarget이 있으면 그 위치 사용
+                    if (targetWarp._warpTarget != null)
+                    {
+                        return targetWarp._warpTarget.position;
+                    }
                     return targetWarp.transform.position;
                 }
             }
             
-            // 목표 워프 포인트를 찾지 못하면 맵의 스폰 포인트 사용
+            // 3. 목표 워프 포인트를 찾지 못하면 맵의 스폰 포인트 사용
             if (_mapManager is MapManager mapMgr)
             {
                 return mapMgr.GetSpawnPosition(_targetMapId);
@@ -343,6 +454,12 @@ namespace Pathfinder.World
             else
             {
                 _spriteRenderer.color = _isActivated ? Color.green : Color.gray;
+            }
+            
+            // 아웃라인 스프라이트도 업데이트
+            if (_outlineRenderer != null && _outlineSprite == null)
+            {
+                _outlineRenderer.sprite = _spriteRenderer.sprite;
             }
         }
         
