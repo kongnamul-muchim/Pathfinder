@@ -37,8 +37,7 @@ namespace Pathfinder.Traps
         // 플레이어 탑승 정보
         private Transform _playerTransform;
         private Rigidbody2D _playerRb;
-        private Transform _playerOriginalParent;
-        private RigidbodyType2D _playerOriginalBodyType;
+        private Vector3 _relativePosition;
         private bool _hasPlayer;
         
         private void Awake()
@@ -105,10 +104,10 @@ namespace Pathfinder.Traps
             // 플랫폼 이동
             _rb.MovePosition(newPlatformPosition);
             
-            // 플레이어를 플랫폼의 자식으로 유지
+            // 플레이어를 플랫폼과 함께 이동 (상대 위치 유지)
             if (_hasPlayer && _playerTransform != null)
             {
-                // 플레이어 위치는 자동으로 플랫폼과 함께 이동 (parenting)
+                MovePlayerWithPlatform();
             }
         }
         
@@ -128,12 +127,15 @@ namespace Pathfinder.Traps
         }
         
         /// <summary>
-        /// 플레이어를 플랫폼과 함께 이동 (Parenting 방식 사용)
+        /// 플레이어를 플랫폼과 함께 이동 (상대 위치 유지)
         /// </summary>
-        private void MovePlayerWithPlatform(Vector2 delta)
+        private void MovePlayerWithPlatform()
         {
-            // Parenting 방식에서는 자동으로 이동함
-            // 이 메서드는 현재 사용되지 않음
+            if (_playerRb == null) return;
+            
+            // 플레이어를 플랫폼의 상대 위치로 이동
+            Vector3 newPosition = transform.position + _relativePosition;
+            _playerRb.MovePosition(newPosition);
         }
         
         /// <summary>
@@ -173,15 +175,9 @@ namespace Pathfinder.Traps
             if (_playerRb == null) return;
             
             _playerTransform = player;
-            _playerOriginalParent = player.parent;
-            _playerOriginalBodyType = _playerRb.bodyType;
             
-            // 플레이어를 플랫폼의 자식으로 설정
-            player.SetParent(transform);
-            
-            // 플레이어의 Rigidbody를 Kinematic으로 변경 (물리 영향 제거)
-            _playerRb.bodyType = RigidbodyType2D.Kinematic;
-            _playerRb.gravityScale = 0f;
+            // 플레이어의 플랫폼에 대한 상대 위치 계산
+            _relativePosition = player.position - transform.position;
             
             _hasPlayer = true;
         }
@@ -191,21 +187,10 @@ namespace Pathfinder.Traps
         /// </summary>
         private void DetachPlayer()
         {
-            if (!_hasPlayer || _playerTransform == null) return;
-            
-            // 원래 부모로 복원
-            _playerTransform.SetParent(_playerOriginalParent);
-            
-            // Rigidbody 복원
-            if (_playerRb != null)
-            {
-                _playerRb.bodyType = _playerOriginalBodyType;
-                _playerRb.gravityScale = 1f;
-            }
+            if (!_hasPlayer) return;
             
             _playerTransform = null;
             _playerRb = null;
-            _playerOriginalParent = null;
             _hasPlayer = false;
         }
         
