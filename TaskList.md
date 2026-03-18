@@ -81,9 +81,9 @@ Assets/
 - [x] **Task 4.2**: Dash 능력 (공중/지상, 더블탭 입력)
 
 ### Phase 5: 함정 시스템
-- [ ] **Task 5.1**: ITrap 인터페이스 정의
-- [ ] **Task 5.2**: SpikeTrap (가시 함정)
-- [ ] **Task 5.3**: MovingPlatform (움직이는 플랫폼)
+- [x] **Task 5.1**: ~~ITrap 인터페이스 정의~~ (태그 기반으로 대체)
+- [x] **Task 5.2**: SpikeTrap (가시 함정) - "Trap" 태그로 즉시 사망
+- [x] **Task 5.3**: MovingPlatform (움직이는 플랫폼) - Velocity 전달 방식
 
 ### Phase 6: 상호작용 (테스트용) ❌ 취소됨
 - [x] ~~Task 6.1: IInteractable 인터페이스~~ (제거됨)
