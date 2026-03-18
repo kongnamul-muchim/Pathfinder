@@ -166,8 +166,9 @@ Assets/
    - 이펙트/사운드 지원
    
 2. **MovingPlatform**: 좌우 또는 상하로 움직이는 플랫폼
-   - **구현 방식**: Parenting (Velocity 전달에서 변경)
-   - 플레이어 탑승 시 플랫폼의 자식으로 설정
+   - **구현 방식**: 위치 동기화 (Position Synchronization)
+   - 플랫폼이 이동한 양(delta)을 플레이어에게 전달
+   - Rigidbody2D.MovePosition 사용으로 물리 충돌 없음
    - 애니메이션 정상 작동, 플레이어가 자동으로 함께 이동
    - 왕복 이동 (양 끝 대기 시간 설정 가능)
    - Gizmos로 이동 경로 시각화
