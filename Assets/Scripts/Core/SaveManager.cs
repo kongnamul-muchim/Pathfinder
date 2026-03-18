@@ -37,6 +37,11 @@ namespace Pathfinder.Core
         // 저장된 맵 ID (Load 후 사용)
         public string LoadedMapId { get; private set; }
         
+        // 워프 저장 예약 데이터
+        private string _reservedMapId;
+        private Vector3 _reservedPosition;
+        private bool _hasReservedWarpSave;
+        
         private void Awake()
         {
             // 저장 폴더 생성
@@ -60,6 +65,56 @@ namespace Pathfinder.Core
             _abilityManager = FindObjectOfType<AbilityManager>();
             _playerController = FindObjectOfType<PlayerController>();
             _mapManager = FindObjectOfType<MapManager>();
+            
+            // MapManager 이벤트 구독
+            if (_mapManager != null)
+                _mapManager.OnMapChanged += OnMapChanged;
+        }
+        
+        private void OnDestroy()
+        {
+            // MapManager 이벤트 구독 해제
+            if (_mapManager != null)
+                _mapManager.OnMapChanged -= OnMapChanged;
+        }
+        
+        /// <summary>
+        /// 맵 전환 이벤트 핸들러
+        /// </summary>
+        private void OnMapChanged(int mapIndex, string mapId)
+        {
+            Debug.Log($"[SAVE] Map changed to: {mapId}, hasReservedWarpSave: {_hasReservedWarpSave}");
+            
+            // 예약된 워프 저장이 있으면 수행
+            if (_hasReservedWarpSave)
+            {
+                Debug.Log($"[SAVE] Executing reserved warp save - Map: {_reservedMapId}, Position: {_reservedPosition}");
+                
+                // 플레이어 위치를 예약된 위치로 이동
+                if (_playerController != null)
+                {
+                    _playerController.transform.position = _reservedPosition;
+                }
+                
+                // 저장 수행
+                Save();
+                
+                // 예약 데이터 초기화
+                _hasReservedWarpSave = false;
+                _reservedMapId = null;
+                _reservedPosition = Vector3.zero;
+            }
+        }
+        
+        /// <summary>
+        /// 워프 후 저장 예약 (WarpPoint에서 호출)
+        /// </summary>
+        public void ReserveWarpSave(string targetMapId, Vector3 targetPosition)
+        {
+            _reservedMapId = targetMapId;
+            _reservedPosition = targetPosition;
+            _hasReservedWarpSave = true;
+            Debug.Log($"[SAVE] Reserved warp save - Map: {targetMapId}, Position: {targetPosition}");
         }
         
         /// <summary>
@@ -114,9 +169,6 @@ namespace Pathfinder.Core
             
             // 파일에 저장
             File.WriteAllText(SaveFilePath, json);
-            
-            // 로깅: 저장된 위치값
-            Debug.Log($"[SAVE] Map: {_currentSaveData.currentMapId}, Position: {_currentSaveData.playerPosition.ToVector3()}");
         }
         
         /// <summary>
@@ -146,9 +198,6 @@ namespace Pathfinder.Core
                 // 데이터 적용
                 ApplySaveData(_currentSaveData);
                 
-                // 로깅: 로드된 위치값
-                Debug.Log($"[LOAD] Map: {_currentSaveData.currentMapId}, Position: {_currentSaveData.playerPosition.ToVector3()}");
-                
                 return true;
             }
             catch (System.Exception ex)
@@ -176,6 +225,36 @@ namespace Pathfinder.Core
                 File.Delete(SaveFilePath);
                 _currentSaveData = null;
                 LoadedMapId = null;
+            }
+        }
+        
+        /// <summary>
+        /// 모든 진행 상황 초기화 (저장 없이 죽었을 때)
+        /// </summary>
+        public void ResetAllProgress()
+        {
+            Debug.Log("[SAVE] ResetAllProgress - Resetting all progress");
+            
+            if (_abilityManager != null)
+            {
+                _abilityManager.ResetAbilities();
+                Debug.Log("[SAVE] Abilities reset");
+            }
+            
+            var chests = FindObjectsOfType<AbilityChest>();
+            foreach (var chest in chests)
+            {
+                chest.ResetChest();
+            }
+            Debug.Log($"[SAVE] {chests.Length} chests reset");
+            
+            ClearSave();
+            
+            if (_mapManager != null && _playerController != null)
+            {
+                Vector3 spawnPosition = _mapManager.GetSpawnPosition(0);
+                _playerController.transform.position = spawnPosition;
+                Debug.Log($"[SAVE] Player moved to SpawnPoint: {spawnPosition}");
             }
         }
         
@@ -267,9 +346,12 @@ namespace Pathfinder.Core
             
             // 씬의 모든 AbilityChest 찾기
             var chests = FindObjectsOfType<AbilityChest>();
+            Debug.Log($"[SAVE] Found {chests.Length} chests in scene");
+            
             foreach (var chest in chests)
             {
                 states.Add(new ChestStateData(chest.GetChestId(), chest.IsOpened()));
+                Debug.Log($"[SAVE] Chest {chest.GetChestId()}: IsOpened = {chest.IsOpened()}");
             }
             
             return states;
@@ -320,6 +402,8 @@ namespace Pathfinder.Core
             var chests = FindObjectsOfType<AbilityChest>();
             var chestDict = new Dictionary<string, AbilityChest>();
             
+            Debug.Log($"[LOAD] Found {chests.Length} chests, restoring {chestStates.Count} states");
+            
             foreach (var chest in chests)
             {
                 chestDict[chest.GetChestId()] = chest;
@@ -330,6 +414,11 @@ namespace Pathfinder.Core
                 if (chestDict.TryGetValue(state.chestId, out var chest))
                 {
                     chest.SetOpened(state.isOpened);
+                    Debug.Log($"[LOAD] Chest {state.chestId}: SetOpened = {state.isOpened}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[LOAD] Chest {state.chestId} not found in scene");
                 }
             }
         }

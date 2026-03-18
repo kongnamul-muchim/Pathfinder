@@ -25,14 +25,14 @@ namespace Pathfinder.Player
         
         private void Awake()
         {
-            // 초기 능력 설정
-            foreach (var ability in _initialAbilities)
-            {
-                if (ability != AbilityType.None)
-                {
-                    _unlockedAbilities.Add(ability);
-                }
-            }
+            // 테스트용: 초기 능력 비활성화
+            // foreach (var ability in _initialAbilities)
+            // {
+            //     if (ability != AbilityType.None)
+            //     {
+            //         _unlockedAbilities.Add(ability);
+            //     }
+            // }
         }
         
         /// <summary>
@@ -53,6 +53,7 @@ namespace Pathfinder.Player
             if (_unlockedAbilities.Contains(ability)) return;
             
             _unlockedAbilities.Add(ability);
+            Debug.Log($"[ABILITY] UnlockAbility: {ability}");
             
             // 이벤트 발행
             OnAbilityUnlocked?.Invoke(ability);
@@ -107,6 +108,7 @@ namespace Pathfinder.Player
         /// </summary>
         public int GetExtraLives()
         {
+            Debug.Log($"[ABILITY] GetExtraLives: {_extraLives}");
             return _extraLives;
         }
         
@@ -116,6 +118,7 @@ namespace Pathfinder.Player
         public void AddExtraLife()
         {
             _extraLives++;
+            Debug.Log($"[ABILITY] AddExtraLife: {_extraLives}");
             OnExtraLivesChanged?.Invoke(_extraLives);
         }
         
@@ -128,6 +131,7 @@ namespace Pathfinder.Player
             if (_extraLives <= 0) return false;
             
             _extraLives--;
+            Debug.Log($"[ABILITY] ConsumeExtraLife: {_extraLives}");
             OnExtraLivesChanged?.Invoke(_extraLives);
             return true;
         }

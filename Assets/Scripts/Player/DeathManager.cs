@@ -1,24 +1,20 @@
 using Pathfinder.Core.DI;
 using Pathfinder.Core;
 using Pathfinder.World;
+using Pathfinder.UI;
 using UnityEngine;
 
 namespace Pathfinder.Player
 {
-    /// <summary>
-    /// 사망 관리자 구현체
-    /// DI Container에 의해 관리됨
-    /// </summary>
     public class DeathManager : MonoBehaviour, IDeathManager
     {
         [Header("Death Settings")]
         [Tooltip("리스폰 시 무적 시간 (초)")]
         [SerializeField] private float _respawnInvincibilityTime = 1f;
         
-        [Tooltip("최대 리스폰 시도 횟수")]
-        [SerializeField] private int _maxRespawnAttempts = 3;
+        [Header("GameOver UI")]
+        [SerializeField] private GameOverUI _gameOverUI;
         
-        // DI 주입
         [Inject] private IAbilityManager _abilityManager;
         [Inject] private ISaveManager _saveManager;
         
@@ -26,18 +22,16 @@ namespace Pathfinder.Player
         
         private void Awake()
         {
-            // DI가 실패했을 경우 씬에서 직접 찾기
             if (_abilityManager == null)
-            {
                 _abilityManager = FindObjectOfType<AbilityManager>();
-            }
             
             if (_saveManager == null)
-            {
                 _saveManager = FindObjectOfType<SaveManager>();
-            }
             
             _mapManager = FindObjectOfType<MapManager>();
+            
+            if (_gameOverUI == null)
+                _gameOverUI = FindObjectOfType<GameOverUI>();
         }
         
         // 마지막 체크포인트 위치
@@ -52,50 +46,102 @@ namespace Pathfinder.Player
         // 무적 상태
         private bool _isInvincible = false;
         
-        /// <summary>
-        /// 플레이어 사망 처리
-        /// </summary>
         public void OnPlayerDeath()
         {
             if (_isInvincible) return;
             
-            Debug.Log($"[DEATH] OnPlayerDeath called - _saveManager: {_saveManager != null}, HasSaveData: {_saveManager?.HasSaveData()}");
+            bool hasSave = _saveManager != null && _saveManager.HasSaveData();
+            int extraLives = _abilityManager?.GetExtraLives() ?? 0;
             
-            // 먼저 추가 목숨 체크
-            if (_abilityManager != null && _abilityManager.GetExtraLives() > 0)
-            {
-                // 추가 목숨 소모
-                if (_abilityManager.ConsumeExtraLife())
-                {
-                    Respawn();
-                    return;
-                }
-            }
+            Debug.Log($"[DEATH] OnPlayerDeath - HasSave: {hasSave}, ExtraLives: {extraLives}");
             
-            // 추가 목숨이 없으면 저장 데이터 로드 시도
             _deathCount++;
             
-            // 저장 데이터가 있으면 롤백
-            if (_saveManager != null && _saveManager.HasSaveData())
+            if (hasSave)
             {
-                // 저장된 맵 ID를 파일에서 직접 읽기 (LoadedMapId는 stale 할 수 있음)
-                SaveManager saveManager = _saveManager as SaveManager;
-                string savedMapId = saveManager?.GetSavedMapId();
-                if (!string.IsNullOrEmpty(savedMapId) && _mapManager != null)
+                if (extraLives > 0)
                 {
-                    _mapManager.SwitchToMap(savedMapId);
+                    RollbackWithLife();
                 }
-                
-                // 저장 데이터 로드 (위치 복원)
-                _saveManager.Load();
-                
-                // Load 후에도 Respawn 호출하여 물리 리셋 및 무적 상태 시작
-                RespawnFromSave();
+                else
+                {
+                    TriggerGameOver();
+                }
             }
             else
             {
-                // 저장 데이터가 없으면 마지막 체크포인트나 시작 위치로 리스폰
-                Respawn();
+                if (extraLives > 0)
+                {
+                    RespawnAtSpawnPointWithLife();
+                }
+                else
+                {
+                    TriggerGameOver();
+                }
+            }
+        }
+        
+        private void RollbackWithLife()
+        {
+            Debug.Log("[DEATH] RollbackWithLife - Loading save and consuming life");
+            
+            var saveManager = _saveManager as SaveManager;
+            string savedMapId = saveManager?.GetSavedMapId();
+            
+            if (!string.IsNullOrEmpty(savedMapId) && _mapManager != null)
+                _mapManager.SwitchToMap(savedMapId);
+            
+            _saveManager.Load();
+            _abilityManager?.ConsumeExtraLife();
+            
+            RespawnFromSave();
+        }
+        
+        private void RespawnAtSpawnPointWithLife()
+        {
+            Debug.Log("[DEATH] RespawnAtSpawnPointWithLife - Resetting progress and spawning at SpawnPoint");
+            
+            var saveManager = _saveManager as SaveManager;
+            saveManager?.ResetAllProgress();
+            
+            _abilityManager?.ConsumeExtraLife();
+            
+            RespawnAtSpawnPoint();
+        }
+        
+        private void RespawnAtSpawnPoint()
+        {
+            if (_mapManager != null)
+            {
+                Vector3 spawnPosition = _mapManager.GetSpawnPosition(0);
+                var player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null)
+                {
+                    player.transform.position = spawnPosition;
+                    
+                    var rb = player.GetComponent<Rigidbody2D>();
+                    if (rb != null)
+                    {
+                        rb.linearVelocity = Vector2.zero;
+                        rb.angularVelocity = 0f;
+                    }
+                    
+                    StartCoroutine(InvincibilityCoroutine());
+                }
+            }
+        }
+        
+        private void TriggerGameOver()
+        {
+            Debug.Log("[DEATH] GameOver triggered");
+            
+            if (_gameOverUI != null)
+            {
+                _gameOverUI.Show();
+            }
+            else
+            {
+                Debug.LogError("[DEATH] GameOverUI is null! Cannot show GameOver screen.");
             }
         }
         
