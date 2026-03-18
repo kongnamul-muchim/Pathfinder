@@ -61,6 +61,16 @@ namespace Pathfinder.Player
         [Tooltip("더블탭 감지 시간 (초)")]
         [SerializeField] private float _doubleTapTime = 0.3f;
         
+        [Header("Dash Collider")]
+        [Tooltip("대쉬 시 Collider 높이 감소량")]
+        [SerializeField] private float _dashColliderHeightReduction = 1f;
+        
+        [Tooltip("빈 공간 최대 탐색 거리")]
+        [SerializeField] private float _safePositionSearchDistance = 3f;
+        
+        [Tooltip("빈 공간 탐색 간격")]
+        [SerializeField] private float _safePositionSearchStep = 0.5f;
+        
         [Header("Interaction")]
         [Tooltip("상호작용 프롬프트 UI 프리팹")]
         [SerializeField] private InteractionPromptUI _interactionPromptPrefab;
@@ -105,10 +115,23 @@ namespace Pathfinder.Player
         private bool _lastLeftKeyState = false;
         private bool _lastRightKeyState = false;
         
+        // 대쉬 Collider
+        private BoxCollider2D _boxCollider;
+        private Vector2 _originalColliderOffset;
+        private Vector2 _originalColliderSize;
+        
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
             _playerAnimator = GetComponent<PlayerAnimator>();
+            
+            // BoxCollider2D 초기화
+            _boxCollider = GetComponent<BoxCollider2D>();
+            if (_boxCollider != null)
+            {
+                _originalColliderOffset = _boxCollider.offset;
+                _originalColliderSize = _boxCollider.size;
+            }
             
             // Input Actions 설정
             _moveAction = new InputAction("Move", binding: "<Keyboard>/a");
@@ -328,6 +351,9 @@ namespace Pathfinder.Player
             // 대쉬 애니메이션 시작
             _playerAnimator?.TriggerDash();
             
+            // Collider 축소
+            SetDashCollider(true);
+            
             // 대쉬 시작
             float originalGravity = _rb.gravityScale;
             
@@ -343,6 +369,9 @@ namespace Pathfinder.Player
                 // 항상 중력 복구 (예외 발생 시에도)
                 _rb.gravityScale = originalGravity;
                 _isDashing = false;
+                
+                // 안전하게 Collider 복원 시도
+                TryRestoreCollider();
             }
             
             // 쿨타임 대기
@@ -353,6 +382,88 @@ namespace Pathfinder.Player
             {
                 _canDash = true;
             }
+        }
+        
+        /// <summary>
+        /// 대쉬 시 Collider 축소/복원
+        /// </summary>
+        private void SetDashCollider(bool enable)
+        {
+            if (_boxCollider == null) return;
+            
+            if (enable)
+            {
+                float newHeight = _originalColliderSize.y - _dashColliderHeightReduction;
+                _boxCollider.size = new Vector2(_originalColliderSize.x, newHeight);
+                
+                float offsetReduction = _dashColliderHeightReduction / 2f;
+                _boxCollider.offset = new Vector2(_originalColliderOffset.x, _originalColliderOffset.y - offsetReduction);
+            }
+            else
+            {
+                _boxCollider.size = _originalColliderSize;
+                _boxCollider.offset = _originalColliderOffset;
+            }
+        }
+        
+        /// <summary>
+        /// 안전하게 Collider 복원 시도
+        /// </summary>
+        private bool TryRestoreCollider()
+        {
+            if (_boxCollider == null) return true;
+            
+            Vector2 checkPosition = (Vector2)transform.position + _originalColliderOffset;
+            
+            if (!Physics2D.OverlapBox(checkPosition, _originalColliderSize, 0f, _groundLayer))
+            {
+                SetDashCollider(false);
+                return true;
+            }
+            
+            Vector2? safePosition = FindSafePositionX();
+            
+            if (safePosition.HasValue)
+            {
+                transform.position = new Vector3(safePosition.Value.x, transform.position.y, transform.position.z);
+                SetDashCollider(false);
+                return true;
+            }
+            
+            SetDashCollider(false);
+            return false;
+        }
+        
+        /// <summary>
+        /// X축으로 빈 공간 탐색
+        /// </summary>
+        private Vector2? FindSafePositionX()
+        {
+            float direction = Mathf.Sign(_rb.linearVelocity.x);
+            if (Mathf.Abs(_rb.linearVelocity.x) < 0.1f) direction = 1f;
+            
+            Vector2? found = SearchInDirection(direction);
+            if (found.HasValue) return found;
+            
+            return SearchInDirection(-direction);
+        }
+        
+        /// <summary>
+        /// 지정된 방향으로 빈 공간 탐색
+        /// </summary>
+        private Vector2? SearchInDirection(float direction)
+        {
+            for (float dist = _safePositionSearchStep; dist <= _safePositionSearchDistance; dist += _safePositionSearchStep)
+            {
+                Vector2 testPosition = (Vector2)transform.position + Vector2.right * direction * dist;
+                Vector2 checkPos = testPosition + _originalColliderOffset;
+                
+                if (!Physics2D.OverlapBox(checkPos, _originalColliderSize, 0f, _groundLayer))
+                {
+                    return testPosition;
+                }
+            }
+            return null;
         }
         
         /// <summary>
