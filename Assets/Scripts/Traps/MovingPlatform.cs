@@ -104,10 +104,10 @@ namespace Pathfinder.Traps
             // 플랫폼 이동
             _rb.MovePosition(newPlatformPosition);
             
-            // 플레이어를 플랫폼과 함께 이동 (상대 위치 유지)
+            // 플레이어를 플랫폼과 함께 이동 (delta만큼)
             if (_hasPlayer && _playerTransform != null)
             {
-                MovePlayerWithPlatform();
+                MovePlayerWithPlatform(delta);
             }
         }
         
@@ -127,14 +127,15 @@ namespace Pathfinder.Traps
         }
         
         /// <summary>
-        /// 플레이어를 플랫폼과 함께 이동 (상대 위치 유지)
+        /// 플레이어를 플랫폼과 함께 이동 (delta만큼 이동, 상대 위치 유지)
         /// </summary>
-        private void MovePlayerWithPlatform()
+        private void MovePlayerWithPlatform(Vector2 delta)
         {
             if (_playerRb == null) return;
+            if (delta.magnitude < 0.001f) return;
             
-            // 플레이어를 플랫폼의 상대 위치로 이동
-            Vector3 newPosition = transform.position + _relativePosition;
+            // 플레이어를 delta만큼 이동 (상대 위치 유지)
+            Vector2 newPosition = _playerRb.position + delta;
             _playerRb.MovePosition(newPosition);
         }
         
