@@ -6,6 +6,23 @@
 
 ## 2026-03-18: GameOver System & Save-based Rollback
 
+### 목숨 저장 버그 수정 (2차)
+- **문제**: 저장 없이 죽을 때 `ResetAllProgress()` → `ResetAbilities()` → 목숨 3으로 리셋 → `ConsumeLife()` → 목숨 2
+- **원인**: `ResetAbilities()`가 능력과 목숨을 함께 리셋
+- **해결**: `ResetAbilitiesOnly()` 메서드 추가 (능력만 리셋, 목숨 유지)
+- **SOLID 준수**: SRP (AbilityManager가 목숨 관리), OCP (기존 코드 수정 없이 새 메서드 추가)
+
+### 파일 수정
+- `IAbilityManager.cs`: `ResetAbilitiesOnly()` 추가
+- `AbilityManager.cs`: `ResetAbilitiesOnly()` 구현
+- `SaveManager.cs`: `ResetAllProgress()`에서 `ResetAbilitiesOnly()` 호출
+
+### Commit: a2457b0
+
+---
+
+## 2026-03-18: GameOver System & Save-based Rollback
+
 ### 목숨 저장 버그 수정
 - `GameSaveData.cs`: `extraLives` → `lives`로 변경 (현재 목숨 직접 저장)
 - `ISaveManager.cs`: `UpdateSavedLives(int lives)` 메서드 추가
