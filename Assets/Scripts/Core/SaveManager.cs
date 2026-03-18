@@ -159,22 +159,29 @@ namespace Pathfinder.Core
                 playerPosition = new Vector3Data(_playerController.transform.position),
                 currentMapId = GetCurrentMapId(),
                 unlockedAbilities = GetUnlockedAbilityIndices(),
-                chestStates = GetAllChestStates(),
-                extraLives = _abilityManager?.GetExtraLives() ?? 0,
+                abilityChestStates = GetAbilityChestStates(),
+                extraLifeChestStates = GetExtraLifeChestStates(),
+                lives = _abilityManager?.GetLives() ?? 3,
                 saveTime = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
             
-            // JSON으로 직렬화
             string json = JsonUtility.ToJson(_currentSaveData, true);
-            
-            // 파일에 저장
             File.WriteAllText(SaveFilePath, json);
+        }
+        
+        /// <summary>
+        /// 저장된 데이터 로드 및 적용 (기본: 모든 상자 복원)
+        /// </summary>
+        public bool Load()
+        {
+            return Load(true);
         }
         
         /// <summary>
         /// 저장된 데이터 로드 및 적용
         /// </summary>
-        public bool Load()
+        /// <param name="restoreExtraLifeChests">목숨 상자도 복원할지 여부 (롤백 시 false)</param>
+        public bool Load(bool restoreExtraLifeChests)
         {
             if (!HasSaveData())
             {
@@ -183,7 +190,6 @@ namespace Pathfinder.Core
             
             try
             {
-                // 파일에서 읽기
                 string json = File.ReadAllText(SaveFilePath);
                 _currentSaveData = JsonUtility.FromJson<GameSaveData>(json);
                 
@@ -192,11 +198,9 @@ namespace Pathfinder.Core
                     return false;
                 }
                 
-                // 저장된 맵 ID 저장 (DeathManager에서 사용)
                 LoadedMapId = _currentSaveData.currentMapId;
                 
-                // 데이터 적용
-                ApplySaveData(_currentSaveData);
+                ApplySaveData(_currentSaveData, restoreExtraLifeChests);
                 
                 return true;
             }
@@ -338,29 +342,49 @@ namespace Pathfinder.Core
         }
         
         /// <summary>
-        /// 모든 상자 상태 가져오기
+        /// 능력 상자 상태만 가져오기
         /// </summary>
-        private List<ChestStateData> GetAllChestStates()
+        private List<ChestStateData> GetAbilityChestStates()
         {
             var states = new List<ChestStateData>();
-            
-            // 씬의 모든 AbilityChest 찾기
             var chests = FindObjectsOfType<AbilityChest>();
-            Debug.Log($"[SAVE] Found {chests.Length} chests in scene");
             
             foreach (var chest in chests)
             {
-                states.Add(new ChestStateData(chest.GetChestId(), chest.IsOpened()));
-                Debug.Log($"[SAVE] Chest {chest.GetChestId()}: IsOpened = {chest.IsOpened()}");
+                if (chest.GetRewardType() != RewardType.ExtraLife)
+                {
+                    states.Add(new ChestStateData(chest.GetChestId(), chest.IsOpened()));
+                }
             }
             
+            Debug.Log($"[SAVE] Found {states.Count} ability chests");
+            return states;
+        }
+        
+        /// <summary>
+        /// 목숨 상자 상태만 가져오기
+        /// </summary>
+        private List<ChestStateData> GetExtraLifeChestStates()
+        {
+            var states = new List<ChestStateData>();
+            var chests = FindObjectsOfType<AbilityChest>();
+            
+            foreach (var chest in chests)
+            {
+                if (chest.GetRewardType() == RewardType.ExtraLife)
+                {
+                    states.Add(new ChestStateData(chest.GetChestId(), chest.IsOpened()));
+                }
+            }
+            
+            Debug.Log($"[SAVE] Found {states.Count} extra life chests");
             return states;
         }
         
         /// <summary>
         /// 저장 데이터 적용
         /// </summary>
-        private void ApplySaveData(GameSaveData data)
+        private void ApplySaveData(GameSaveData data, bool restoreExtraLifeChests)
         {
             // 1. 맵 전환 (맵 ID가 있을 경우)
             if (!string.IsNullOrEmpty(data.currentMapId) && _mapManager != null)
@@ -383,30 +407,37 @@ namespace Pathfinder.Core
                     _abilityManager.UnlockAbility((AbilityType)abilityIndex);
                 }
                 
-                // 추가 목숨 복원
-                for (int i = 0; i < data.extraLives; i++)
-                {
-                    _abilityManager.AddExtraLife();
-                }
+                // 목숨 복원
+                _abilityManager.SetLives(data.lives);
+                Debug.Log($"[LOAD] Lives restored: {data.lives}");
             }
             
-            // 4. 상자 상태 복원
-            RestoreChestStates(data.chestStates);
+            // 4. 능력 상자 상태 복원 (항상 복원)
+            RestoreAbilityChestStates(data.abilityChestStates);
+            
+            // 5. 목숨 상자 상태 복원 (롤백 시 제외)
+            if (restoreExtraLifeChests && data.extraLifeChestStates != null)
+            {
+                RestoreExtraLifeChestStates(data.extraLifeChestStates);
+            }
         }
         
         /// <summary>
-        /// 상자 상태 복원
+        /// 능력 상자 상태 복원
         /// </summary>
-        private void RestoreChestStates(List<ChestStateData> chestStates)
+        private void RestoreAbilityChestStates(List<ChestStateData> chestStates)
         {
+            if (chestStates == null) return;
+            
             var chests = FindObjectsOfType<AbilityChest>();
             var chestDict = new Dictionary<string, AbilityChest>();
             
-            Debug.Log($"[LOAD] Found {chests.Length} chests, restoring {chestStates.Count} states");
-            
             foreach (var chest in chests)
             {
-                chestDict[chest.GetChestId()] = chest;
+                if (chest.GetRewardType() != RewardType.ExtraLife)
+                {
+                    chestDict[chest.GetChestId()] = chest;
+                }
             }
             
             foreach (var state in chestStates)
@@ -414,15 +445,59 @@ namespace Pathfinder.Core
                 if (chestDict.TryGetValue(state.chestId, out var chest))
                 {
                     chest.SetOpened(state.isOpened);
-                    Debug.Log($"[LOAD] Chest {state.chestId}: SetOpened = {state.isOpened}");
-                }
-                else
-                {
-                    Debug.LogWarning($"[LOAD] Chest {state.chestId} not found in scene");
+                    Debug.Log($"[LOAD] Ability Chest {state.chestId}: SetOpened = {state.isOpened}");
                 }
             }
         }
         
-
+        /// <summary>
+        /// 저장된 목숨만 업데이트 (롤백 후 사용)
+        /// </summary>
+        public void UpdateSavedLives(int lives)
+        {
+            if (!HasSaveData()) return;
+            
+            try
+            {
+                string json = File.ReadAllText(SaveFilePath);
+                _currentSaveData = JsonUtility.FromJson<GameSaveData>(json);
+                _currentSaveData.lives = lives;
+                json = JsonUtility.ToJson(_currentSaveData, true);
+                File.WriteAllText(SaveFilePath, json);
+                Debug.Log($"[SAVE] Updated saved lives to: {lives}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[SAVE ERROR] UpdateSavedLives failed: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 목숨 상자 상태 복원
+        /// </summary>
+        private void RestoreExtraLifeChestStates(List<ChestStateData> chestStates)
+        {
+            if (chestStates == null) return;
+            
+            var chests = FindObjectsOfType<AbilityChest>();
+            var chestDict = new Dictionary<string, AbilityChest>();
+            
+            foreach (var chest in chests)
+            {
+                if (chest.GetRewardType() == RewardType.ExtraLife)
+                {
+                    chestDict[chest.GetChestId()] = chest;
+                }
+            }
+            
+            foreach (var state in chestStates)
+            {
+                if (chestDict.TryGetValue(state.chestId, out var chest))
+                {
+                    chest.SetOpened(state.isOpened);
+                    Debug.Log($"[LOAD] Extra Life Chest {state.chestId}: SetOpened = {state.isOpened}");
+                }
+            }
+        }
     }
 }

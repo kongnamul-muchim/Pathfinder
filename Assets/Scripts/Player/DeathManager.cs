@@ -51,15 +51,15 @@ namespace Pathfinder.Player
             if (_isInvincible) return;
             
             bool hasSave = _saveManager != null && _saveManager.HasSaveData();
-            int extraLives = _abilityManager?.GetExtraLives() ?? 0;
+            int lives = _abilityManager?.GetLives() ?? 0;
             
-            Debug.Log($"[DEATH] OnPlayerDeath - HasSave: {hasSave}, ExtraLives: {extraLives}");
+            Debug.Log($"[DEATH] OnPlayerDeath - HasSave: {hasSave}, Lives: {lives}");
             
             _deathCount++;
             
             if (hasSave)
             {
-                if (extraLives > 0)
+                if (lives > 1)
                 {
                     RollbackWithLife();
                 }
@@ -70,7 +70,7 @@ namespace Pathfinder.Player
             }
             else
             {
-                if (extraLives > 0)
+                if (lives > 1)
                 {
                     RespawnAtSpawnPointWithLife();
                 }
@@ -91,8 +91,11 @@ namespace Pathfinder.Player
             if (!string.IsNullOrEmpty(savedMapId) && _mapManager != null)
                 _mapManager.SwitchToMap(savedMapId);
             
-            _saveManager.Load();
-            _abilityManager?.ConsumeExtraLife();
+            _saveManager.Load(false);
+            _abilityManager?.ConsumeLife();
+            
+            int remainingLives = _abilityManager?.GetLives() ?? 0;
+            saveManager?.UpdateSavedLives(remainingLives);
             
             RespawnFromSave();
         }
@@ -104,7 +107,7 @@ namespace Pathfinder.Player
             var saveManager = _saveManager as SaveManager;
             saveManager?.ResetAllProgress();
             
-            _abilityManager?.ConsumeExtraLife();
+            _abilityManager?.ConsumeLife();
             
             RespawnAtSpawnPoint();
         }
