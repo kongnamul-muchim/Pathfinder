@@ -131,12 +131,8 @@ namespace Pathfinder.Traps
         {
             if (delta.magnitude < 0.001f) return;
             
-            Rigidbody2D playerRb = _playerTransform.GetComponent<Rigidbody2D>();
-            if (playerRb == null) return;
-            
-            // 플레이어 위치를 delta만큼 이동
-            Vector2 newPosition = playerRb.position + delta;
-            playerRb.MovePosition(newPosition);
+            // Transform을 직접 조작하여 완벽한 동기화
+            _playerTransform.position += (Vector3)delta;
         }
         
         /// <summary>
