@@ -85,12 +85,42 @@ namespace Pathfinder.Player
                 
                 // 저장 데이터 로드 (위치 복원)
                 _saveManager.Load();
+                
+                // Load 후에도 Respawn 호출하여 물리 리셋 및 무적 상태 시작
+                RespawnFromSave();
             }
             else
             {
                 // 저장 데이터가 없으면 마지막 체크포인트나 시작 위치로 리스폰
                 Respawn();
             }
+        }
+        
+        /// <summary>
+        /// 저장 데이터에서 리스폰 처리 (Load 후 호출)
+        /// </summary>
+        private void RespawnFromSave()
+        {
+            if (_isRespawning) return;
+            _isRespawning = true;
+            
+            // 플레이어 찾기
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                // 물리 속도 리셋
+                var rb = player.GetComponent<Rigidbody2D>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector2.zero;
+                    rb.angularVelocity = 0f;
+                }
+                
+                // 무적 상태 시작
+                StartCoroutine(InvincibilityCoroutine());
+            }
+            
+            _isRespawning = false;
         }
         
         /// <summary>
