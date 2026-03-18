@@ -217,3 +217,168 @@ Removed player following logic from MovingPlatform. Platform now only moves on i
 - Assets/Scripts/Player/DeathManager.cs
 
 **Commit:** 13572dd - feat: Improve save system with auto-save and spawn point logic
+
+---
+
+## Warp Save Location Fix - 2025-03-18
+
+**Changes Made:**
+Modified WarpPoint.cs to save ONLY at destination, not at origin.
+
+**WarpPoint.cs Changes:**
+- Removed save at departure (origin) - lines 118-120 deleted
+- Improved destination save timing:
+  - Changed from `WaitForFixedUpdate` to `WaitForSeconds(0.1f)`
+  - Ensures map transition is fully complete before saving
+- Result: Warping from 1-1 to 1-2 now saves at 1-2 (not 1-1)
+
+**Additional Changes in this commit:**
+1. **SaveManager.cs** - Added debug code to delete save file on Awake (UNITY_EDITOR only, for testing)
+2. **PlayerController.cs** - Fixed wall detection:
+   - Reduced `_wallCheckDistance` from 0.35f to 0.2f
+   - Added `_excludeWallTags` array (Platform, MovingPlatform)
+   - Added `IsExcludedFromWall()` method to ignore tiles near walls
+
+**Behavior:**
+- 1-1 → 1-2 워프 시: 1-2 도착 후에만 저장됨
+- 테스트 후 SaveManager.cs의 디버그 코드 제거 필요
+
+**Files Modified:**
+- Assets/Scripts/World/WarpPoint.cs
+- Assets/Scripts/Core/SaveManager.cs (debug code)
+- Assets/Scripts/Player/PlayerController.cs (wall detection fix)
+
+**Commit:** 48394d0 - feat: Modify warp save to save only at destination (not origin)
+
+---
+
+## Death Respawn Fix - 2025-03-18
+
+**Problem:**
+사망 시 저장된 위치로 돌아가지만, 물리 리셋과 무적 상태가 적용되지 않음. 또한 처음 시작 위치로 돌아가는 문제 발생.
+
+**Root Cause:**
+DeathManager.OnPlayerDeath()에서 SaveManager.Load() 후 Respawn()을 호출하지 않았음.
+- Load()만 하면 위치는 복원되지만 rb.velocity 리셋 안 됨
+- 무적 상태(Invincibility) 시작 안 됨
+- _isRespawning 플래그 처리 안 됨
+
+**Solution:**
+1. **RespawnFromSave() 메서드 추가**
+   - Load() 후 호출하여 물리 리셋과 무적 상태 시작
+   - Respawn()과 분리하여 체크포인트 위치 사용 여부 차이
+
+2. **DeathManager.cs 수정**
+   - Load() 후 RespawnFromSave() 호출하도록 변경
+   - 물리 속도 리셋 (rb.linearVelocity = Vector2.zero)
+   - 무적 코루틴 시작 (InvincibilityCoroutine)
+
+**Files Modified:**
+- Assets/Scripts/Player/DeathManager.cs
+
+**Commit:** fc74b46 - fix: Call RespawnFromSave after Load to reset physics and start invincibility
+
+---
+
+## Save Map ID Fix - 2025-03-18
+
+**Problem:**
+1-2에서 사망해도 1-1로 리스폰됨. 저장은 1-2 위치로 되지만 사망 시 1-1로 감.
+
+**Root Cause:**
+`LoadedMapId`는 `Load()` 호출 시에만 업데이트됨. 워프 시 `Save()`만 호출되므로 `LoadedMapId`는 여전히 이전 맵("1-1")을 가리킴.
+
+```
+흐름:
+1. 게임 시작: Load() → LoadedMapId = "1-1"
+2. 1-1 → 1-2 워프: Save()만 호출, LoadedMapId는 "1-1" 유지
+3. 1-2에서 사망: LoadedMapId("1-1")로 맵 전환 → 잘못된 맵!
+```
+
+**Solution:**
+1. **SaveManager.cs**
+   - `GetSavedMapId()` 메서드 추가
+   - 저장 파일에서 `currentMapId`를 직접 읽어 반환
+   - 파일 I/O 예외 처리 포함
+
+2. **DeathManager.cs**
+   - `saveManager.LoadedMapId` → `saveManager.GetSavedMapId()`로 변경
+   - Load() 전에 최신 맵 ID를 읽어 맵 전환
+
+**Behavior Change:**
+- 사망 시 항상 저장된 최신 맵 ID로 전환
+- 1-2에서 사망 → 1-2로 리스폰
+
+**Files Modified:**
+- Assets/Scripts/Core/SaveManager.cs
+- Assets/Scripts/Player/DeathManager.cs
+
+**Commit:** 3382184 - fix: Use GetSavedMapId() to read correct map ID when respawning
+
+---
+
+## Save System Logging & Debug Cleanup - 2025-03-18
+
+**Changes:**
+1. **Debug Code Removal**
+   - SaveManager.Awake()의 파일 삭제 코드 제거
+   - 저장 파일이 이제 유지됨 (Play 시 초기화되지 않음)
+
+2. **Position Logging Added**
+   - Save() 시: `[SAVE] Map: {mapId}, Position: {x, y, z}` 로그 출력
+   - Load() 시: `[LOAD] Map: {mapId}, Position: {x, y, z}` 로그 출력
+   - Unity Console에서 Save/Load 위치값 확인 가능
+
+**Purpose:**
+- Save 시점의 위치와 Load 시점의 위치가 같은지 확인
+- 저장/로드 시스템 디버깅 용이
+
+**Files Modified:**
+- Assets/Scripts/Core/SaveManager.cs
+
+**Commit:** af8adba - feat: Add logging for save/load position and remove debug code
+
+---
+
+## Debug Logging for Warp & Death - 2025-03-18
+
+**Problem:**
+- Warp는 되지만 Save 로그가 안 뜸
+- P 키로 죽었을 때 Death 로그가 안 뜸
+- 저장 파일 초기화 여부 확인 필요
+
+**Changes:**
+1. **WarpPoint.cs**
+   - `OnInteract()` - 상호작용 호출 로그
+   - `WarpSequence()` - 전체 흐름 추적 로그
+   - `ResolveServices()` - Manager null 체크 로그
+
+2. **PlayerController.cs**
+   - `Die()` - _deathManager null 체크 로그
+
+3. **DeathManager.cs**
+   - `OnPlayerDeath()` - _saveManager, HasSaveData 상태 로그
+
+4. **SaveManager.cs**
+   - Play 시 저장 파일 초기화 코드 복원 (UNITY_EDITOR)
+
+**Expected Log Flow:**
+```
+[WARP] OnInteract called - CanInteract: True, _isPlayerInRange: True, _isWarping: False
+[WARP] WarpSequence START - _isWarping: False
+[WARP] Target: 1-2, SaveManager: True
+[WARP] Starting PerformWarp...
+[WARP] PerformWarp completed
+[WARP] Waiting 0.1s before save...
+[WARP] Save check - _saveManager: True
+[WARP] Calling Save()...
+[SAVE] Map: 1-2, Position: (x, y, z)
+[WARP] Save() completed
+```
+
+**Files Modified:**
+- Assets/Scripts/World/WarpPoint.cs
+- Assets/Scripts/Player/PlayerController.cs
+- Assets/Scripts/Player/DeathManager.cs
+
+**Commit:** c7faa84 - debug: Add detailed logging to WarpPoint for save system debugging
