@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-03-18: Dash Collider System
+
+### 대쉬 시 Collider 축소 기능
+- 대쉬 시 BoxCollider2D 높이 감소로 낮은 틈새 통과 가능
+- 대쉬 종료 시 안전한 복원 처리 (충돌 시 X축 빈 공간 탐색)
+
+### Inspector 설정
+- `_dashColliderHeightReduction`: 높이 감소량 (기본 1)
+- `_safePositionSearchDistance`: 빈 공간 최대 탐색 거리 (기본 3)
+- `_safePositionSearchStep`: 탐색 간격 (기본 0.5)
+
+### 메서드
+- `SetDashCollider(bool)`: Collider 축소/복원
+- `TryRestoreCollider()`: 안전한 복원 시도
+- `FindSafePositionX()`: X축 빈 공간 탐색
+- `SearchInDirection(float)`: 지정 방향 탐색
+
+### Commit: 7254fa0
+
+---
+
 ## 2026-03-18: GameOver System & Save-based Rollback
 
 ### 목숨 저장 버그 수정 (2차)
