@@ -45,7 +45,13 @@ namespace Pathfinder.Core
                 Directory.CreateDirectory(SaveFolderPath);
             }
             
-            // 디버그 코드 제거 - 저장 파일 유지
+            // Play 시 저장 파일 초기화 (테스트용)
+            #if UNITY_EDITOR
+            if (File.Exists(SaveFilePath))
+            {
+                File.Delete(SaveFilePath);
+            }
+            #endif
         }
         
         private void Start()
