@@ -4,7 +4,7 @@ namespace Pathfinder.Traps
 {
     /// <summary>
     /// 이동 플랫폼 - 플레이어 탑승 시 함께 이동
-    /// Parenting 방식 사용 (플레이어를 플랫폼의 자식으로 설정)
+    /// 위치 동기화 방식 사용 (플레이어를 플랫폼의 자식으로 설정 + 위치 보정)
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class MovingPlatform : MonoBehaviour
@@ -27,9 +27,6 @@ namespace Pathfinder.Traps
         [Tooltip("플레이어 태그")]
         [SerializeField] private string _playerTag = "Player";
         
-        [Tooltip("플레이어의 로컬 위치 고정 (움직임 보정용)")]
-        [SerializeField] private bool _fixPlayerLocalPosition = true;
-        
         private Rigidbody2D _rb;
         private Vector2 _startPosition;
         private Vector2 _targetPosition;
@@ -37,11 +34,13 @@ namespace Pathfinder.Traps
         private float _waitTimer = 0f;
         private bool _isWaiting = false;
         
+        // 플랫폼 이동량 추적
+        private Vector2 _previousPosition;
+        private Vector2 _platformDelta;
+        
         // 플레이어 탑승 정보
-        private Transform _playerTransform;
-        private Transform _playerOriginalParent;
+        private Rigidbody2D _playerRb;
         private bool _hasPlayer;
-        private Vector3 _playerLocalPos;
         
         private void Awake()
         {
@@ -61,11 +60,19 @@ namespace Pathfinder.Traps
         private void Start()
         {
             _startPosition = transform.position;
+            _previousPosition = _startPosition;
             CalculateTargetPosition();
         }
         
         private void FixedUpdate()
         {
+            // 현재 위치 저장
+            Vector2 currentPosition = transform.position;
+            
+            // 플랫폼 이동량 계산 (이전 프레임 대비)
+            _platformDelta = currentPosition - _previousPosition;
+            _previousPosition = currentPosition;
+            
             // 대기 중이면 이동하지 않음
             if (_isWaiting)
             {
@@ -80,20 +87,23 @@ namespace Pathfinder.Traps
                 return;
             }
             
-            // 플랫폼 이동 전 플레이어의 로컬 위치 저장
-            if (_hasPlayer && _playerTransform != null && _fixPlayerLocalPosition)
-            {
-                _playerLocalPos = _playerTransform.localPosition;
-            }
+            // 이동 전 위치 저장
+            Vector2 positionBeforeMove = currentPosition;
             
-            // 이동
+            // 플랫폼 이동
             MovePlatform();
             
-            // 플레이어 로컬 위치 고정 (물리 업데이트 후 위치 보정)
-            if (_hasPlayer && _playerTransform != null && _fixPlayerLocalPosition)
+            // 실제 이동량 계산
+            Vector2 actualDelta = (Vector2)transform.position - positionBeforeMove;
+            
+            // 플레이어 위치 동기화
+            if (_hasPlayer && _playerRb != null)
             {
-                _playerTransform.localPosition = _playerLocalPos;
+                SyncPlayerPosition(actualDelta);
             }
+            
+            // 다음 프레임을 위해 위치 업데이트
+            _previousPosition = transform.position;
         }
         
         /// <summary>
@@ -141,6 +151,18 @@ namespace Pathfinder.Traps
         }
         
         /// <summary>
+        /// 플레이어 위치 동기화
+        /// </summary>
+        private void SyncPlayerPosition(Vector2 delta)
+        {
+            if (delta.magnitude < 0.001f) return;
+            
+            // 플레이어의 위치를 플랫폼 이동량만큼 이동
+            Vector2 playerPos = _playerRb.position;
+            _playerRb.MovePosition(playerPos + delta);
+        }
+        
+        /// <summary>
         /// 플레이어가 플랫폼 위에 있는지 확인
         /// </summary>
         private void OnCollisionEnter2D(Collision2D collision)
@@ -153,7 +175,7 @@ namespace Pathfinder.Traps
                 // 플레이어가 위에서 내려온 경우 (법선 벡터가 위쪽)
                 if (contact.normal.y < -0.5f)
                 {
-                    AttachPlayer(collision.transform);
+                    AttachPlayer(collision.gameObject);
                     break;
                 }
             }
@@ -169,19 +191,14 @@ namespace Pathfinder.Traps
         /// <summary>
         /// 플레이어를 플랫폼에 부착
         /// </summary>
-        private void AttachPlayer(Transform player)
+        private void AttachPlayer(GameObject player)
         {
             if (_hasPlayer) return;
             
-            _playerTransform = player;
-            _playerOriginalParent = player.parent;
+            _playerRb = player.GetComponent<Rigidbody2D>();
+            if (_playerRb == null) return;
+            
             _hasPlayer = true;
-            
-            // 플레이어를 플랫폼의 자식으로 설정
-            player.SetParent(transform);
-            
-            // 로컬 위치 고정을 위해 현재 위치 저장
-            _playerLocalPos = player.localPosition;
         }
         
         /// <summary>
@@ -189,13 +206,9 @@ namespace Pathfinder.Traps
         /// </summary>
         private void DetachPlayer()
         {
-            if (!_hasPlayer || _playerTransform == null) return;
+            if (!_hasPlayer) return;
             
-            // 원래 부모로 복원
-            _playerTransform.SetParent(_playerOriginalParent);
-            
-            _playerTransform = null;
-            _playerOriginalParent = null;
+            _playerRb = null;
             _hasPlayer = false;
         }
         
