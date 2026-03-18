@@ -36,6 +36,7 @@ namespace Pathfinder.Traps
         
         // 플레이어 탑승 정보
         private Transform _playerTransform;
+        private Rigidbody2D _playerRb;
         private bool _hasPlayer;
         
         private void Awake()
@@ -130,8 +131,12 @@ namespace Pathfinder.Traps
         private void MovePlayerWithPlatform(Vector2 delta)
         {
             if (delta.magnitude < 0.001f) return;
+            if (_playerRb == null) return;
             
-            // Transform을 직접 조작하여 완벽한 동기화
+            // 플레이어 속도를 0으로 설정 (추가 힘 방지)
+            _playerRb.linearVelocity = Vector2.zero;
+            
+            // 위치 이동
             _playerTransform.position += (Vector3)delta;
         }
         
@@ -169,6 +174,7 @@ namespace Pathfinder.Traps
             if (_hasPlayer) return;
             
             _playerTransform = player;
+            _playerRb = player.GetComponent<Rigidbody2D>();
             _hasPlayer = true;
         }
         
@@ -180,6 +186,7 @@ namespace Pathfinder.Traps
             if (!_hasPlayer) return;
             
             _playerTransform = null;
+            _playerRb = null;
             _hasPlayer = false;
         }
         
