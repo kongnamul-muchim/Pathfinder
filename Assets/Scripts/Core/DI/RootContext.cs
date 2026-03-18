@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace Pathfinder.Core.DI
@@ -48,9 +46,8 @@ namespace Pathfinder.Core.DI
                 {
                     installer.Install(container);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    // DI 주입 실패 - 콘솔 출력 제거
                 }
             }
 
@@ -67,16 +64,15 @@ namespace Pathfinder.Core.DI
             foreach (var behaviour in childBehaviours)
             {
                 if (behaviour == null) continue;
-                if (behaviour == this) continue; // Don't inject RootContext itself
-                if (behaviour is Installer) continue; // Installers are already injected
+                if (behaviour == this) continue;
+                if (behaviour is Installer) continue;
 
                 try
                 {
                     DIContainerManager.InjectInto(behaviour);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    // DI 주입 실패 - 콘솔 출력 제거
                 }
             }
         }

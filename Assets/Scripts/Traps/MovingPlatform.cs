@@ -157,6 +157,12 @@ namespace Pathfinder.Traps
         {
             if (delta.magnitude < 0.001f) return;
             
+            if (_playerRb == null)
+            {
+                DetachPlayer();
+                return;
+            }
+            
             // 플레이어의 위치를 플랫폼 이동량만큼 이동
             Vector2 playerPos = _playerRb.position;
             _playerRb.MovePosition(playerPos + delta);
