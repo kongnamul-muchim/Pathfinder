@@ -1,5 +1,6 @@
 using Pathfinder.Core.DI;
 using Pathfinder.Core;
+using Pathfinder.World;
 using UnityEngine;
 
 namespace Pathfinder.Player
@@ -21,6 +22,8 @@ namespace Pathfinder.Player
         [Inject] private IAbilityManager _abilityManager;
         [Inject] private ISaveManager _saveManager;
         
+        private MapManager _mapManager;
+        
         private void Awake()
         {
             // DI가 실패했을 경우 씬에서 직접 찾기
@@ -33,6 +36,8 @@ namespace Pathfinder.Player
             {
                 _saveManager = FindObjectOfType<SaveManager>();
             }
+            
+            _mapManager = FindObjectOfType<MapManager>();
         }
         
         // 마지막 체크포인트 위치
@@ -71,6 +76,14 @@ namespace Pathfinder.Player
             // 저장 데이터가 있으면 롤백
             if (_saveManager != null && _saveManager.HasSaveData())
             {
+                // 저장된 맵으로 먼저 전환
+                SaveManager saveManager = _saveManager as SaveManager;
+                if (saveManager != null && !string.IsNullOrEmpty(saveManager.LoadedMapId) && _mapManager != null)
+                {
+                    _mapManager.SwitchToMap(saveManager.LoadedMapId);
+                }
+                
+                // 저장 데이터 로드 (위치 복원)
                 _saveManager.Load();
             }
             else

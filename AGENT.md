@@ -122,3 +122,58 @@ Assets/Scripts/Core/DI/
 - Maintain consistency with established patterns
 - Document public APIs with XML comments
 - Prefer explicit over implicit for maintainability
+
+---
+
+## Debug Log Cleanup - 2025-03-17
+
+**Changes Made:**
+Removed all Debug.Log, Debug.LogWarning, and Debug.LogError statements from the following files:
+
+1. **WarpPoint.cs** - Removed player enter/exit logs, warp sequence logs
+2. **MapManager.cs** - Removed invalid index warning, map activation/deactivation logs
+3. **SaveManager.cs** - Removed awake/start logs, kept only [SAVE] and [LOAD] logs
+4. **PlayerController.cs** - Removed ability/death manager logs, jump/dash logs, interaction detection logs
+5. **DeathManager.cs** - No logs found (clean)
+6. **AbilityChest.cs** - Removed reset log
+7. **AbilityManager.cs** - Removed unlock and extra life logs
+8. **AbilityUnlockable.cs** - Removed warning and unlock logs
+9. **CameraController.cs** - Removed transition complete log
+10. **Portal.cs** - Removed auto-collider log, teleport logs
+11. **Checkpoint.cs** - Removed activation log
+12. **RewardPopupUI.cs** - Removed show log
+13. **GameInstaller.cs** - Removed ability manager error log
+14. **RootContext.cs** - Removed installer warning/error logs
+15. **DIContainerManager.cs** - Removed initialization and disposal logs
+
+**Result:** Cleaner console output, only essential save/load logs remain for debugging.
+
+**Files Modified:**
+- Assets/Scripts/World/WarpPoint.cs
+- Assets/Scripts/World/MapManager.cs
+- Assets/Scripts/Core/SaveManager.cs
+- Assets/Scripts/Player/PlayerController.cs
+- Assets/Scripts/Player/AbilityManager.cs
+- Assets/Scripts/Abilities/AbilityChest.cs
+- Assets/Scripts/Abilities/AbilityUnlockable.cs
+- Assets/Scripts/World/CameraController.cs
+- Assets/Scripts/World/Portal.cs
+- Assets/Scripts/World/Checkpoint.cs
+- Assets/Scripts/UI/RewardPopupUI.cs
+- Assets/Scripts/Core/GameInstaller.cs
+- Assets/Scripts/Core/DI/RootContext.cs
+- Assets/Scripts/Core/DI/DIContainerManager.cs
+
+**Commit:** e83cad9 - Remove Debug.Log statements from game scripts
+
+---
+
+## MovingPlatform Update - 2025-03-18
+
+**Changes Made:**
+Removed player following logic from MovingPlatform. Platform now only moves on its own without carrying the player.
+
+**Files Modified:**
+- Assets/Scripts/Traps/MovingPlatform.cs
+
+**Commit:** 9461b5f - refactor: Remove player following logic from MovingPlatform
