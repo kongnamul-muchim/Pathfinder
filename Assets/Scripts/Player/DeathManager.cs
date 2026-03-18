@@ -76,11 +76,12 @@ namespace Pathfinder.Player
             // 저장 데이터가 있으면 롤백
             if (_saveManager != null && _saveManager.HasSaveData())
             {
-                // 저장된 맵으로 먼저 전환
+                // 저장된 맵 ID를 파일에서 직접 읽기 (LoadedMapId는 stale 할 수 있음)
                 SaveManager saveManager = _saveManager as SaveManager;
-                if (saveManager != null && !string.IsNullOrEmpty(saveManager.LoadedMapId) && _mapManager != null)
+                string savedMapId = saveManager?.GetSavedMapId();
+                if (!string.IsNullOrEmpty(savedMapId) && _mapManager != null)
                 {
-                    _mapManager.SwitchToMap(saveManager.LoadedMapId);
+                    _mapManager.SwitchToMap(savedMapId);
                 }
                 
                 // 저장 데이터 로드 (위치 복원)

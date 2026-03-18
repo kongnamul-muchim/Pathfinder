@@ -206,7 +206,24 @@ namespace Pathfinder.Core
             Save();
         }
         
-        #region Helper Methods
+        /// <summary>
+        /// 저장된 맵 ID 가져오기 (파일에서 직접 읽기)
+        /// </summary>
+        public string GetSavedMapId()
+        {
+            if (!HasSaveData()) return string.Empty;
+            
+            try
+            {
+                string json = File.ReadAllText(SaveFilePath);
+                GameSaveData data = JsonUtility.FromJson<GameSaveData>(json);
+                return data?.currentMapId ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
         
         /// <summary>
         /// 현재 맵 ID 가져오기
