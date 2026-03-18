@@ -595,6 +595,8 @@ namespace Pathfinder.Player
         
         private void Die()
         {
+            Debug.Log($"[DIE] Called - _deathManager: {_deathManager != null}");
+            
             // 사망 애니메이션 트리거
             _playerAnimator?.TriggerDeath();
             _deathManager?.OnPlayerDeath();

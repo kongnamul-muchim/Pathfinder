@@ -59,6 +59,8 @@ namespace Pathfinder.Player
         {
             if (_isInvincible) return;
             
+            Debug.Log($"[DEATH] OnPlayerDeath called - _saveManager: {_saveManager != null}, HasSaveData: {_saveManager?.HasSaveData()}");
+            
             // 먼저 추가 목숨 체크
             if (_abilityManager != null && _abilityManager.GetExtraLives() > 0)
             {

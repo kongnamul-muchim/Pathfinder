@@ -100,6 +100,13 @@ namespace Pathfinder.World
             _saveManager ??= FindObjectOfType<SaveManager>();
             _deathManager ??= FindObjectOfType<DeathManager>();
             _mapManager ??= FindObjectOfType<MapManager>();
+            
+            if (_saveManager == null)
+                Debug.LogError($"[WARP] {gameObject.name}: SaveManager not found!");
+            if (_deathManager == null)
+                Debug.LogError($"[WARP] {gameObject.name}: DeathManager not found!");
+            if (_mapManager == null)
+                Debug.LogError($"[WARP] {gameObject.name}: MapManager not found!");
         }
 
         private void ResetState()
@@ -110,26 +117,39 @@ namespace Pathfinder.World
 
         private IEnumerator WarpSequence()
         {
+            Debug.Log($"[WARP] WarpSequence START - _isWarping: {_isWarping}");
             if (_isWarping) yield break;
             _isWarping = true;
 
             try
             {
-                // 출발지 저장 제거 - 도착지에서만 저장
+                Debug.Log($"[WARP] Target: {_targetMapId}, SaveManager: {_saveManager != null}");
 
                 OnWarpStarted?.Invoke(_warpPointId, transform.position);
 
                 if (!string.IsNullOrEmpty(_targetMapId))
+                {
+                    Debug.Log("[WARP] Starting PerformWarp...");
                     yield return StartCoroutine(PerformWarp());
+                    Debug.Log("[WARP] PerformWarp completed");
+                }
 
                 OnWarpCompleted?.Invoke(_targetWarpPointId, GetTargetPosition());
                 
                 // 도착지에서 저장 (맵 전환 완료 후)
                 // 맵 전환과 위치 확정이 완료된 후 저장
+                Debug.Log("[WARP] Waiting 0.1s before save...");
                 yield return new WaitForSeconds(0.1f); // 맵 전환 완료 대기
+                Debug.Log($"[WARP] Save check - _saveManager: {_saveManager != null}");
                 if (_saveManager != null)
                 {
+                    Debug.Log("[WARP] Calling Save()...");
                     _saveManager.Save();
+                    Debug.Log("[WARP] Save() completed");
+                }
+                else
+                {
+                    Debug.LogError("[WARP] SaveManager is null! Cannot save.");
                 }
                 
                 // 체크포인트도 도착지로 설정
@@ -139,8 +159,11 @@ namespace Pathfinder.World
                     if (player != null)
                     {
                         _deathManager.SetCheckpoint(player.transform.position);
+                        Debug.Log($"[WARP] Checkpoint set: {player.transform.position}");
                     }
                 }
+                
+                Debug.Log("[WARP] WarpSequence END");
             }
             finally
             {
@@ -261,6 +284,7 @@ namespace Pathfinder.World
 
         public void OnInteract()
         {
+            Debug.Log($"[WARP] OnInteract called - CanInteract: {CanInteract()}, _isPlayerInRange: {_isPlayerInRange}, _isWarping: {_isWarping}");
             if (CanInteract())
                 StartCoroutine(WarpSequence());
         }
