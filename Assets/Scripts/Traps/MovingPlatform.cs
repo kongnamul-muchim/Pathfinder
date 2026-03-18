@@ -3,8 +3,7 @@ using UnityEngine;
 namespace Pathfinder.Traps
 {
     /// <summary>
-    /// 이동 플랫폼 - 플레이어 탑승 시 함께 이동
-    /// Position 기반 동기화 (플레이어가 가만히 있어도 따라감)
+    /// 이동 플랫폼
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class MovingPlatform : MonoBehaviour
@@ -23,20 +22,12 @@ namespace Pathfinder.Traps
         [Tooltip("양 끝에서 대기 시간 (초)")]
         [SerializeField] private float _waitTime = 0.5f;
         
-        [Header("Player")]
-        [Tooltip("플레이어 태그")]
-        [SerializeField] private string _playerTag = "Player";
-        
         private Rigidbody2D _rb;
         private Vector2 _startPosition;
         private Vector2 _targetPosition;
         private bool _movingForward = true;
         private float _waitTimer = 0f;
         private bool _isWaiting = false;
-        
-        // 플레이어 탑승 정보
-        private Rigidbody2D _playerRb;
-        private bool _hasPlayer;
         
         private void Awake()
         {
@@ -75,20 +66,8 @@ namespace Pathfinder.Traps
                 return;
             }
             
-            // 이동 전 위치 저장
-            Vector2 positionBeforeMove = transform.position;
-            
             // 플랫폼 이동
             MovePlatform();
-            
-            // 실제 이동량 계산
-            Vector2 delta = (Vector2)transform.position - positionBeforeMove;
-            
-            // 플레이어 위치 동기화 (X축만)
-            if (_hasPlayer && _playerRb != null)
-            {
-                MovePlayerWithPlatform(delta);
-            }
         }
         
         /// <summary>
@@ -133,76 +112,6 @@ namespace Pathfinder.Traps
                 Vector2 newPosition = currentPosition + (direction * moveDistance);
                 _rb.MovePosition(newPosition);
             }
-        }
-        
-        /// <summary>
-        /// 플레이어를 플랫폼과 함께 이동 (X축만, Y축은 자유)
-        /// </summary>
-        private void MovePlayerWithPlatform(Vector2 delta)
-        {
-            if (delta.magnitude < 0.001f) return;
-            
-            // X축만 동기화 (Y축은 중력/점프에 맡김)
-            Vector2 newPosition = _playerRb.position;
-            newPosition.x += delta.x;
-            
-            // 수직 이동 플랫폼이면 Y축도 동기화
-            if (Mathf.Abs(_moveDirection.y) > 0.1f)
-            {
-                newPosition.y += delta.y;
-            }
-            
-            _playerRb.MovePosition(newPosition);
-        }
-        
-        /// <summary>
-        /// 플레이어가 플랫폼 위에 있는지 확인
-        /// </summary>
-        private void OnCollisionEnter2D(Collision2D collision)
-        {
-            if (!collision.gameObject.CompareTag(_playerTag)) return;
-            
-            // 플레이어가 플랫폼 위에 있는지 확인 (접촉점이 플랫폼 위쪽인지)
-            foreach (var contact in collision.contacts)
-            {
-                // 플레이어가 위에서 내려온 경우 (법선 벡터가 위쪽)
-                if (contact.normal.y < -0.5f)
-                {
-                    AttachPlayer(collision.gameObject);
-                    break;
-                }
-            }
-        }
-        
-        private void OnCollisionExit2D(Collision2D collision)
-        {
-            if (!collision.gameObject.CompareTag(_playerTag)) return;
-            
-            DetachPlayer();
-        }
-        
-        /// <summary>
-        /// 플레이어를 플랫폼에 부착
-        /// </summary>
-        private void AttachPlayer(GameObject player)
-        {
-            if (_hasPlayer) return;
-            
-            _playerRb = player.GetComponent<Rigidbody2D>();
-            if (_playerRb == null) return;
-            
-            _hasPlayer = true;
-        }
-        
-        /// <summary>
-        /// 플레이어를 플랫폼에서 분리
-        /// </summary>
-        private void DetachPlayer()
-        {
-            if (!_hasPlayer) return;
-            
-            _playerRb = null;
-            _hasPlayer = false;
         }
         
         /// <summary>
