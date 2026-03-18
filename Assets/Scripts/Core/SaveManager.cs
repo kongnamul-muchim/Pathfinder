@@ -45,15 +45,7 @@ namespace Pathfinder.Core
                 Directory.CreateDirectory(SaveFolderPath);
             }
             
-            // 디버그: 시작 시 세이브 파일 삭제 (테스트용)
-            // 테스트 후 이 코드는 제거하세요
-            #if UNITY_EDITOR
-            if (File.Exists(SaveFilePath))
-            {
-                File.Delete(SaveFilePath);
-                Debug.Log("[DEBUG] Save file deleted on Awake: " + SaveFilePath);
-            }
-            #endif
+            // 디버그 코드 제거 - 저장 파일 유지
         }
         
         private void Start()
@@ -116,6 +108,9 @@ namespace Pathfinder.Core
             
             // 파일에 저장
             File.WriteAllText(SaveFilePath, json);
+            
+            // 로깅: 저장된 위치값
+            Debug.Log($"[SAVE] Map: {_currentSaveData.currentMapId}, Position: {_currentSaveData.playerPosition.ToVector3()}");
         }
         
         /// <summary>
@@ -144,6 +139,9 @@ namespace Pathfinder.Core
                 
                 // 데이터 적용
                 ApplySaveData(_currentSaveData);
+                
+                // 로깅: 로드된 위치값
+                Debug.Log($"[LOAD] Map: {_currentSaveData.currentMapId}, Position: {_currentSaveData.playerPosition.ToVector3()}");
                 
                 return true;
             }
@@ -330,6 +328,6 @@ namespace Pathfinder.Core
             }
         }
         
-        #endregion
+
     }
 }
