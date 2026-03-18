@@ -4,7 +4,7 @@ namespace Pathfinder.Traps
 {
     /// <summary>
     /// 이동 플랫폼 - 플레이어 탑승 시 함께 이동
-    /// 위치 동기화 방식 사용 (플레이어를 플랫폼의 자식으로 설정 + 위치 보정)
+    /// 위치 동기화 방식 사용 (이동량을 미리 계산하여 동시에 적용)
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class MovingPlatform : MonoBehaviour
@@ -34,12 +34,8 @@ namespace Pathfinder.Traps
         private float _waitTimer = 0f;
         private bool _isWaiting = false;
         
-        // 플랫폼 이동량 추적
-        private Vector2 _previousPosition;
-        private Vector2 _platformDelta;
-        
         // 플레이어 탑승 정보
-        private Rigidbody2D _playerRb;
+        private Transform _playerTransform;
         private bool _hasPlayer;
         
         private void Awake()
@@ -60,19 +56,11 @@ namespace Pathfinder.Traps
         private void Start()
         {
             _startPosition = transform.position;
-            _previousPosition = _startPosition;
             CalculateTargetPosition();
         }
         
         private void FixedUpdate()
         {
-            // 현재 위치 저장
-            Vector2 currentPosition = transform.position;
-            
-            // 플랫폼 이동량 계산 (이전 프레임 대비)
-            _platformDelta = currentPosition - _previousPosition;
-            _previousPosition = currentPosition;
-            
             // 대기 중이면 이동하지 않음
             if (_isWaiting)
             {
@@ -87,23 +75,38 @@ namespace Pathfinder.Traps
                 return;
             }
             
-            // 이동 전 위치 저장
-            Vector2 positionBeforeMove = currentPosition;
+            // 이번 프레임에 이동할 delta 계산
+            Vector2 currentPosition = transform.position;
+            Vector2 direction = (_targetPosition - currentPosition).normalized;
+            float distanceToTarget = Vector2.Distance(currentPosition, _targetPosition);
+            float moveDistance = _moveSpeed * Time.fixedDeltaTime;
             
-            // 플랫폼 이동
-            MovePlatform();
+            Vector2 delta;
+            Vector2 newPlatformPosition;
             
-            // 실제 이동량 계산
-            Vector2 actualDelta = (Vector2)transform.position - positionBeforeMove;
-            
-            // 플레이어 위치 동기화
-            if (_hasPlayer && _playerRb != null)
+            if (distanceToTarget <= moveDistance)
             {
-                SyncPlayerPosition(actualDelta);
+                // 목표에 도달
+                delta = _targetPosition - currentPosition;
+                newPlatformPosition = _targetPosition;
+                _isWaiting = true;
+                _waitTimer = 0f;
+            }
+            else
+            {
+                // 일반 이동
+                delta = direction * moveDistance;
+                newPlatformPosition = currentPosition + delta;
             }
             
-            // 다음 프레임을 위해 위치 업데이트
-            _previousPosition = transform.position;
+            // 플레이어가 있으면 플레이어도 같은 delta만큼 이동
+            if (_hasPlayer && _playerTransform != null)
+            {
+                MovePlayerWithPlatform(delta);
+            }
+            
+            // 플랫폼 이동
+            _rb.MovePosition(newPlatformPosition);
         }
         
         /// <summary>
@@ -122,50 +125,18 @@ namespace Pathfinder.Traps
         }
         
         /// <summary>
-        /// 플랫폼 이동
+        /// 플레이어를 플랫폼과 함께 이동
         /// </summary>
-        private void MovePlatform()
-        {
-            Vector2 currentPosition = transform.position;
-            Vector2 direction = (_targetPosition - currentPosition).normalized;
-            float distanceToTarget = Vector2.Distance(currentPosition, _targetPosition);
-            
-            // 목표에 도달했거나 지나쳤는지 확인
-            float moveDistance = _moveSpeed * Time.fixedDeltaTime;
-            
-            if (distanceToTarget <= moveDistance)
-            {
-                // 목표 위치로 정확히 이동
-                _rb.MovePosition(_targetPosition);
-                
-                // 대기 시작
-                _isWaiting = true;
-                _waitTimer = 0f;
-            }
-            else
-            {
-                // 목표 방향으로 이동
-                Vector2 newPosition = currentPosition + (direction * moveDistance);
-                _rb.MovePosition(newPosition);
-            }
-        }
-        
-        /// <summary>
-        /// 플레이어 위치 동기화
-        /// </summary>
-        private void SyncPlayerPosition(Vector2 delta)
+        private void MovePlayerWithPlatform(Vector2 delta)
         {
             if (delta.magnitude < 0.001f) return;
             
-            if (_playerRb == null)
-            {
-                DetachPlayer();
-                return;
-            }
+            Rigidbody2D playerRb = _playerTransform.GetComponent<Rigidbody2D>();
+            if (playerRb == null) return;
             
-            // 플레이어의 위치를 플랫폼 이동량만큼 이동
-            Vector2 playerPos = _playerRb.position;
-            _playerRb.MovePosition(playerPos + delta);
+            // 플레이어 위치를 delta만큼 이동
+            Vector2 newPosition = playerRb.position + delta;
+            playerRb.MovePosition(newPosition);
         }
         
         /// <summary>
@@ -181,7 +152,7 @@ namespace Pathfinder.Traps
                 // 플레이어가 위에서 내려온 경우 (법선 벡터가 위쪽)
                 if (contact.normal.y < -0.5f)
                 {
-                    AttachPlayer(collision.gameObject);
+                    AttachPlayer(collision.transform);
                     break;
                 }
             }
@@ -197,13 +168,11 @@ namespace Pathfinder.Traps
         /// <summary>
         /// 플레이어를 플랫폼에 부착
         /// </summary>
-        private void AttachPlayer(GameObject player)
+        private void AttachPlayer(Transform player)
         {
             if (_hasPlayer) return;
             
-            _playerRb = player.GetComponent<Rigidbody2D>();
-            if (_playerRb == null) return;
-            
+            _playerTransform = player;
             _hasPlayer = true;
         }
         
@@ -214,7 +183,7 @@ namespace Pathfinder.Traps
         {
             if (!_hasPlayer) return;
             
-            _playerRb = null;
+            _playerTransform = null;
             _hasPlayer = false;
         }
         
