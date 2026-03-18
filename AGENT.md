@@ -177,3 +177,43 @@ Removed player following logic from MovingPlatform. Platform now only moves on i
 - Assets/Scripts/Traps/MovingPlatform.cs
 
 **Commit:** 9461b5f - refactor: Remove player following logic from MovingPlatform
+
+---
+
+## Save System Improvements - 2025-03-18
+
+**Changes Made:**
+1. **SaveManager.cs**
+   - Added `OnApplicationQuit()` for auto-save on game exit
+   - Added `LoadedMapId` property to track loaded map for death respawn
+   - Improved `ApplySaveData()` to switch maps before restoring position
+   - Added MapManager reference for proper map ID handling
+
+2. **MapManager.cs**
+   - Modified `Start()` to check for save data and load or initialize first spawn
+   - Added `InitializeFirstSpawn()` to place player at SpawnPoint when no save exists
+   - Added SaveManager and PlayerController references
+
+3. **WarpPoint.cs**
+   - Modified `WarpSequence()` to save on arrival (destination)
+   - Added checkpoint update at destination after warp completes
+   - Maintains save on departure (origin) for safety
+
+4. **DeathManager.cs**
+   - Added MapManager reference for map switching
+   - Modified `OnPlayerDeath()` to switch to saved map before loading
+   - Ensures player respawns in correct map when dying in different map
+
+**Behavior Changes:**
+- Game auto-saves on exit (no manual save needed)
+- First play starts at SpawnPoint instead of saved position
+- Warping to new map saves arrival position (not departure)
+- Dying in 1-2 respawns at 1-2's WarpPoint (not 1-1)
+
+**Files Modified:**
+- Assets/Scripts/Core/SaveManager.cs
+- Assets/Scripts/World/MapManager.cs
+- Assets/Scripts/World/WarpPoint.cs
+- Assets/Scripts/Player/DeathManager.cs
+
+**Commit:** 13572dd - feat: Improve save system with auto-save and spawn point logic
