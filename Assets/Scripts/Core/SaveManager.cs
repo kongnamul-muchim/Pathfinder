@@ -241,8 +241,8 @@ namespace Pathfinder.Core
             
             if (_abilityManager != null)
             {
-                _abilityManager.ResetAbilities();
-                Debug.Log("[SAVE] Abilities reset");
+                _abilityManager.ResetAbilitiesOnly();
+                Debug.Log("[SAVE] Abilities reset (lives preserved)");
             }
             
             var chests = FindObjectsOfType<AbilityChest>();
