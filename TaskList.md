@@ -85,16 +85,16 @@ Assets/
 - [ ] **Task 5.2**: SpikeTrap (가시 함정)
 - [ ] **Task 5.3**: MovingPlatform (움직이는 플랫폼)
 
-### Phase 6: 상호작용 (테스트용)
-- [ ] **Task 6.1**: IInteractable 인터페이스
-- [ ] **Task 6.2**: Lever (레버 작동)
-- [ ] **Task 6.3**: Door (문 열림)
+### Phase 6: 상호작용 (테스트용) ❌ 취소됨
+- [x] ~~Task 6.1: IInteractable 인터페이스~~ (제거됨)
+- [x] ~~Task 6.2: Lever (레버 작동)~~ (제거됨)
+- [x] ~~Task 6.3: Door (문 열림)~~ (제거됨)
 
-### Phase 7: 보스 시스템
-- [ ] **Task 7.1**: BossGate (모든 능력 필요)
-- [ ] **Task 7.2**: Boss (배경 보스)
-- [ ] **Task 7.3**: BossAttack 패턴
-- [ ] **Task 7.4**: Boss 처치 및 게임 클리어
+### Phase 7: 보스 시스템 ❌ 취소됨
+- [x] ~~Task 7.1: BossGate (모든 능력 필요)~~ (제거됨)
+- [x] ~~Task 7.2: Boss (배경 보스)~~ (제거됨)
+- [x] ~~Task 7.3: BossAttack 패턴~~ (제거됨)
+- [x] ~~Task 7.4: Boss 처치 및 게임 클리어~~ (제거됨)
 
 ### Phase 8: UI 시스템
 - [ ] **Task 8.1**: DeathCounter (데스 횟수)
@@ -107,7 +107,7 @@ Assets/
 - [ ] **Task 9.2**: Map 2 (DoubleJump 구체, 세이브포인트 1개)
 - [ ] **Task 9.3**: Map 3 (PerspectiveShift 구체, 세이브포인트 1개)
 - [ ] **Task 9.4**: Map 4 (고난이도, 세이브포인트 1개)
-- [ ] **Task 9.5**: Boss Map (큼, BossGate)
+- [ ] **Task 9.5**: ~~Boss Map (큼, BossGate)~~ - 제거됨
 - [ ] **Task 9.6**: 포탈 연결 설정
 
 ### Phase 10: 스프라이트 및 리소스
@@ -116,7 +116,7 @@ Assets/
 - [ ] **Task 10.3**: 능력 구체 스프라이트
 - [ ] **Task 10.4**: 포탈/체크포인트 스프라이트
 - [ ] **Task 10.5**: 함정 스프라이트
-- [ ] **Task 10.6**: 보스 스프라이트
+- [x] ~~Task 10.6: 보스 스프라이트~~ (제거됨)
 - [ ] **Task 10.7**: 타일/배경 스프라이트
 
 ### Phase 11: 테스트 및 최적화
@@ -156,22 +156,18 @@ Assets/
                                                         ↓
                                           [Map 3] → Dash 획득 → ...
                                                         ↓
-                                          [Map 4] → 모든 능력 테스트 → Boss Map
+                                          [Map 4] → 모든 능력 테스트 → 게임 클리어
 ```
 
 ### 함정 종류
 1. **SpikeTrap**: 바닥/벽에 설치된 가시 (즉사)
 2. **MovingPlatform**: 좌우 또는 상하로 움직이는 플랫폼
-3. **PatrolEnemy**: 정해진 경로를 순찰하는 적 (즉사)
 
-### 보스 시스템
-- **입장 조건**: DoubleJump + Dash 능력 획득
-- **BossGate**: 력이 없으면 진입 불가
-- **공격 패턴**:
-  - 투사체 발사
-  - 지역 공격
-  - 소환물
-- **클리어**: 보스 처치 시 게임 클리어
+~~### 보스 시스템~~ ❌ 제거됨
+- ~~**입장 조건**: DoubleJump + Dash 능력 획득~~
+- ~~**BossGate**: 능력이 없으면 진입 불가~~
+- ~~**공격 패턴**~~
+- ~~**클리어**: 보스 처치 시 게임 클리어~~
 
 ---
 
