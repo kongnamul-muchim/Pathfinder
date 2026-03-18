@@ -44,6 +44,16 @@ namespace Pathfinder.Core
             {
                 Directory.CreateDirectory(SaveFolderPath);
             }
+            
+            // 디버그: 시작 시 세이브 파일 삭제 (테스트용)
+            // 테스트 후 이 코드는 제거하세요
+            #if UNITY_EDITOR
+            if (File.Exists(SaveFilePath))
+            {
+                File.Delete(SaveFilePath);
+                Debug.Log("[DEBUG] Save file deleted on Awake: " + SaveFilePath);
+            }
+            #endif
         }
         
         private void Start()

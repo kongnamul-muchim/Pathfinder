@@ -30,9 +30,11 @@ namespace Pathfinder.Player
         [SerializeField] private float _maxSlopeAngle = 45f;
         
         [Header("Wall Detection")]
-        [SerializeField] private float _wallCheckDistance = 0.35f;
+        [SerializeField] private float _wallCheckDistance = 0.2f;  // 0.35f에서 감소
         [SerializeField] private float _wallSlideSpeed = 2f;
         [SerializeField] private LayerMask _wallLayer;
+        [Tooltip("벽으로 취급하지 않을 태그 (쉼표로 구분)")]
+        [SerializeField] private string[] _excludeWallTags = new string[] { "Platform", "MovingPlatform" };
         
         [Header("Jump")]
         [SerializeField] private float _jumpForce = 7f;
@@ -464,9 +466,9 @@ namespace Pathfinder.Player
             // 여러 지점에서 벽 체크 (더 정확한 감지)
             Vector2[] checkPoints = new Vector2[]
             {
-                position + Vector2.up * 0.5f,    // 상단
+                position + Vector2.up * 0.3f,     // 상단 (0.5f에서 감소)
                 position,                         // 중앙
-                position + Vector2.down * 0.3f    // 하단
+                position + Vector2.down * 0.2f    // 하단 (0.3f에서 감소)
             };
             
             _isTouchingWall = false;
@@ -481,11 +483,32 @@ namespace Pathfinder.Player
                 
                 if (wallHit.collider != null)
                 {
+                    // 제외 태그 확인
+                    if (IsExcludedFromWall(wallHit.collider))
+                    {
+                        continue;
+                    }
+                    
                     _isTouchingWall = true;
                     _wallDirection = direction;
                     break;
                 }
             }
+        }
+        
+        /// <summary>
+        /// 벽으로 취급하지 않을 오브젝트인지 확인
+        /// </summary>
+        private bool IsExcludedFromWall(Collider2D collider)
+        {
+            foreach (var tag in _excludeWallTags)
+            {
+                if (collider.CompareTag(tag))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         
         /// <summary>

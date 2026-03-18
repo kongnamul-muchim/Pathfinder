@@ -115,9 +115,7 @@ namespace Pathfinder.World
 
             try
             {
-                // 출발지에서 저장 (기존 기능 유지)
-                if (_saveManager != null)
-                    _saveManager.Save();
+                // 출발지 저장 제거 - 도착지에서만 저장
 
                 OnWarpStarted?.Invoke(_warpPointId, transform.position);
 
@@ -126,9 +124,9 @@ namespace Pathfinder.World
 
                 OnWarpCompleted?.Invoke(_targetWarpPointId, GetTargetPosition());
                 
-                // 도착지에서 다시 저장 (새로운 기능)
-                // 이동 후 현재 위치와 맵을 정확히 저장
-                yield return new WaitForFixedUpdate(); // 위치 확정 대기
+                // 도착지에서 저장 (맵 전환 완료 후)
+                // 맵 전환과 위치 확정이 완료된 후 저장
+                yield return new WaitForSeconds(0.1f); // 맵 전환 완료 대기
                 if (_saveManager != null)
                 {
                     _saveManager.Save();
