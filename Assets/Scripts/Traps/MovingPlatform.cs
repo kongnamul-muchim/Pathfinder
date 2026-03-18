@@ -4,7 +4,7 @@ namespace Pathfinder.Traps
 {
     /// <summary>
     /// 이동 플랫폼 - 플레이어 탑승 시 함께 이동
-    /// Velocity 기반 동기화 (플레이어가 자유롭게 움직일 수 있음)
+    /// Position 기반 동기화 (플레이어가 가만히 있어도 따라감)
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class MovingPlatform : MonoBehaviour
@@ -34,10 +34,6 @@ namespace Pathfinder.Traps
         private float _waitTimer = 0f;
         private bool _isWaiting = false;
         
-        // 플랫폼 이동량 추적
-        private Vector2 _previousPosition;
-        private Vector2 _platformVelocity;
-        
         // 플레이어 탑승 정보
         private Rigidbody2D _playerRb;
         private bool _hasPlayer;
@@ -60,19 +56,11 @@ namespace Pathfinder.Traps
         private void Start()
         {
             _startPosition = transform.position;
-            _previousPosition = _startPosition;
             CalculateTargetPosition();
         }
         
         private void FixedUpdate()
         {
-            // 현재 위치 저장
-            Vector2 currentPosition = transform.position;
-            
-            // 플랫폼 이동량 계산 (이전 프레임 대비)
-            _platformVelocity = (currentPosition - _previousPosition) / Time.fixedDeltaTime;
-            _previousPosition = currentPosition;
-            
             // 대기 중이면 이동하지 않음
             if (_isWaiting)
             {
@@ -88,23 +76,19 @@ namespace Pathfinder.Traps
             }
             
             // 이동 전 위치 저장
-            Vector2 positionBeforeMove = currentPosition;
+            Vector2 positionBeforeMove = transform.position;
             
             // 플랫폼 이동
             MovePlatform();
             
             // 실제 이동량 계산
-            Vector2 actualDelta = (Vector2)transform.position - positionBeforeMove;
-            Vector2 actualVelocity = actualDelta / Time.fixedDeltaTime;
+            Vector2 delta = (Vector2)transform.position - positionBeforeMove;
             
-            // 플레이어 속도 동기화
+            // 플레이어 위치 동기화 (X축만)
             if (_hasPlayer && _playerRb != null)
             {
-                SyncPlayerVelocity(actualVelocity);
+                MovePlayerWithPlatform(delta);
             }
-            
-            // 다음 프레임을 위해 위치 업데이트
-            _previousPosition = transform.position;
         }
         
         /// <summary>
@@ -152,23 +136,23 @@ namespace Pathfinder.Traps
         }
         
         /// <summary>
-        /// 플레이어 속도 동기화
+        /// 플레이어를 플랫폼과 함께 이동 (X축만, Y축은 자유)
         /// </summary>
-        private void SyncPlayerVelocity(Vector2 platformVelocity)
+        private void MovePlayerWithPlatform(Vector2 delta)
         {
-            if (platformVelocity.magnitude < 0.01f) return;
+            if (delta.magnitude < 0.001f) return;
             
-            // 플레이어의 X축 속도에 플랫폼 속도 추가 (Y축은 중력/점프에 맡김)
-            Vector2 playerVelocity = _playerRb.linearVelocity;
-            playerVelocity.x = platformVelocity.x;
+            // X축만 동기화 (Y축은 중력/점프에 맡김)
+            Vector2 newPosition = _playerRb.position;
+            newPosition.x += delta.x;
             
-            // 플랫폼이 수직으로 움직이면 Y축도 동기화
+            // 수직 이동 플랫폼이면 Y축도 동기화
             if (Mathf.Abs(_moveDirection.y) > 0.1f)
             {
-                playerVelocity.y = platformVelocity.y;
+                newPosition.y += delta.y;
             }
             
-            _playerRb.linearVelocity = playerVelocity;
+            _playerRb.MovePosition(newPosition);
         }
         
         /// <summary>
