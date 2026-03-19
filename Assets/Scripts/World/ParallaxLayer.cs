@@ -20,8 +20,11 @@ namespace Pathfinder.World
         [SerializeField] private float _smoothSpeed = 5f;
         
         [Header("Shader")]
-        [Tooltip("Offset 적용할 텍스처 프로퍼티 이름")]
-        [SerializeField] private string _textureProperty = "_MainTex";
+        [Tooltip("Offset 프로퍼티 이름 (Shader Graph: _Offset, 일반 셰이더: _MainTex)")]
+        [SerializeField] private string _offsetProperty = "_Offset";
+        
+        [Tooltip("Shader Graph 사용 여부 (true: SetVector, false: SetTextureOffset)")]
+        [SerializeField] private bool _useShaderGraph = true;
         
         [Header("Sorting")]
         [Tooltip("렌더링 순서 (낮을수록 뒤)")]
@@ -32,7 +35,7 @@ namespace Pathfinder.World
         
         private SpriteRenderer _spriteRenderer;
         private Material _material;
-        private int _texturePropertyId;
+        private int _offsetPropertyId;
         private Vector3 _initialPosition;
         
         private void Start()
@@ -48,7 +51,7 @@ namespace Pathfinder.World
             if (_spriteRenderer != null)
             {
                 _material = _spriteRenderer.material;
-                _texturePropertyId = Shader.PropertyToID(_textureProperty);
+                _offsetPropertyId = Shader.PropertyToID(_offsetProperty);
             }
             
             ApplySortingSettings();
@@ -85,7 +88,15 @@ namespace Pathfinder.World
             if (_material == null) return;
             
             float offsetX = cameraX * _parallaxSpeed * _offsetMultiplier;
-            _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
+            
+            if (_useShaderGraph)
+            {
+                _material.SetVector(_offsetPropertyId, new Vector2(offsetX, 0));
+            }
+            else
+            {
+                _material.SetTextureOffset(_offsetPropertyId, new Vector2(offsetX, 0));
+            }
         }
         
         public void SetParallaxSpeed(float speed)

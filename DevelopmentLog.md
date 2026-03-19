@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-03-19: Parallax Shader Graph Support
+
+### 문제 해결
+- **Shader Graph 미작동**: `SetTextureOffset`은 `_MainTex_ST`만 조절
+- **해결**: Shader Graph의 `_Offset` Vector2 프로퍼티를 `SetVector`로 직접 조절
+
+### ParallaxLayer.cs 변경사항
+```csharp
+[Header("Shader")]
+[SerializeField] private string _offsetProperty = "_Offset";
+[SerializeField] private bool _useShaderGraph = true;
+
+// LateUpdate
+if (_useShaderGraph)
+{
+    _material.SetVector(_offsetPropertyId, new Vector2(offsetX, 0));
+}
+else
+{
+    _material.SetTextureOffset(_offsetPropertyId, new Vector2(offsetX, 0));
+}
+```
+
+### Inspector 설정
+| 필드 | 기본값 | 설명 |
+|------|--------|------|
+| Offset Property | `_Offset` | Shader Graph용 프로퍼티 이름 |
+| Use Shader Graph | `true` | Shader Graph 사용 여부 |
+
+### 셰이더별 설정
+| 셰이더 | Use Shader Graph | Offset Property |
+|--------|------------------|-----------------|
+| Parallax.shadergraph | `true` | `_Offset` |
+| Sprites/Default | `false` | `_MainTex` |
+| URP/Unlit | `false` | `_BaseMap` |
+
+### Commit: c9adbad
+
+---
+
 ## 2026-03-19: Parallax System Simplified
 
 ### 문제 해결
