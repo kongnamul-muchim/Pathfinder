@@ -4,6 +4,45 @@
 
 ---
 
+## 2026-03-19: Parallax Background System (Material Offset)
+
+### Material Offset 기반 패럴랙스 배경
+- 기존 Transform 이동 방식 → Material Texture Offset 방식으로 변경
+- 단일 오브젝트로 무한 스크롤 구현 (오브젝트 복제 불필요)
+- Draw Call 최적화
+
+### ParallaxLayer 변경사항
+- `_material.mainTextureOffset` 조정으로 배경 이동
+- `_tiling`: 텍스처 반복 설정 (Vector2)
+- Player 위치 기반 Offset 계산: `playerX * (1 - speed) / textureWidth`
+
+### Inspector 설정
+- `Player`: 플레이어 Transform 할당 (필수)
+- `Parallax Speed`: 0~1 (0=고정, 1=따라감)
+- `Tiling`: 텍스처 반복 (기본 1,1)
+- `Order In Layer`: 렌더링 순서 (낮을수록 뒤)
+- `Sorting Layer Name`: "Background"
+
+### Unity 설정
+```
+Backgrounds
+├── Layer_0 (SpriteRenderer + ParallaxLayer)
+│   ├── Parallax Speed: 0.1
+│   └── Order In Layer: -100
+├── Layer_1 (SpriteRenderer + ParallaxLayer)
+│   ├── Parallax Speed: 0.3
+│   └── Order In Layer: -50
+...
+```
+
+### 주의사항
+- Texture Wrap Mode: `Repeat` 설정 필수
+- `renderer.material` 사용 시 자동으로 인스턴스 생성
+
+### Commit: 088b995
+
+---
+
 ## 2026-03-18: Dash Collider System
 
 ### 대쉬 시 Collider 축소 기능
