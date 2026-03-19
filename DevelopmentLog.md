@@ -59,6 +59,32 @@ Backgrounds
 
 ---
 
+## 2026-03-19: Parallax Background System 개선
+
+### 최종 구현 방식
+- **Transform**: 카메라를 따라감 (화면에 항상 보임)
+- **Texture Offset**: Speed와 OffsetMultiplier 조합으로 풍경 스크롤
+
+### Inspector 설정
+- `Parallax Speed`: 0~1 (낮을수록 배경 풍경이 천천히 변화)
+- `Offset Multiplier`: 배수 조절 (기본 1.0)
+
+### Offset 계산
+```
+offsetX = cameraX × (1 - speed) × offsetMultiplier / textureWidth
+```
+
+### 설정 예시
+| 배경 | Speed | OffsetMultiplier | 효과 |
+|------|-------|------------------|------|
+| Layer_0 (가장 먼) | 0.1 | 1.0 | 가장 느림 |
+| Layer_2 (중간) | 0.5 | 1.0 | 중간 |
+| Layer_4 (가장 가까운) | 0.9 | 1.0 | 가장 빠름 |
+
+### Commit: 0991449
+
+---
+
 ## 2026-03-18: Dash Collider System
 
 ### 대쉬 시 Collider 축소 기능

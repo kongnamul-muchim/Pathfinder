@@ -6,12 +6,15 @@ namespace Pathfinder.World
     public class ParallaxLayer : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("카메라 Transform (필수)")]
+        [Tooltip("카메라 Transform (비워두면 Camera.main 사용)")]
         [SerializeField] private Transform _camera;
         
         [Header("Parallax Settings")]
-        [Tooltip("패럴랙스 속도 (0=완전 고정, 1=카메라 완전 따라감)")]
+        [Tooltip("패럴랙스 속도 (낮을수록 배경 풍경이 천천히 변화)")]
         [SerializeField] private float _parallaxSpeed = 0.5f;
+        
+        [Tooltip("Offset 배수 (값이 클수록 풍경 변화가 빠름)")]
+        [SerializeField] private float _offsetMultiplier = 1f;
         
         [Tooltip("텍스처 반복 (가로, 세로)")]
         [SerializeField] private Vector2 _tiling = Vector2.one;
@@ -82,17 +85,15 @@ namespace Pathfinder.World
             
             float cameraX = _camera.position.x;
             
-            // Transform 위치 업데이트 (카메라 따라감)
-            Vector3 newPosition = transform.position;
-            newPosition.x = _initialPosition.x + cameraX * _parallaxSpeed;
-            transform.position = newPosition;
+            // Transform: 카메라 따라감 (화면에 항상 보임)
+            transform.position = new Vector3(cameraX, _initialPosition.y, _initialPosition.z);
             
             if (!Application.isPlaying) return;
             
             if (_material == null || _textureWidth <= 0) return;
             
-            // Texture Offset (패럴랙스 효과)
-            float offsetX = cameraX * (1 - _parallaxSpeed) / _textureWidth;
+            // Texture Offset: Speed와 Multiplier 조합
+            float offsetX = cameraX * (1 - _parallaxSpeed) * _offsetMultiplier / _textureWidth;
             _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
         }
         
