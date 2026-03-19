@@ -41,7 +41,7 @@ _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
 - Texture Wrap Mode: `Repeat` 설정 필수
 - URP Shader에서는 `_BaseMap` 사용 (Sprites/Default는 `_MainTex`)
 
-### Commit: (예정)
+### Commit: 415d361
 
 ---
 
