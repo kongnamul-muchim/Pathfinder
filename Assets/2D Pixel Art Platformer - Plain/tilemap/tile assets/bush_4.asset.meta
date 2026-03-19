@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6807898d81b174c4d80629e1256e6c6c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 312391
+  packageName: 2D Pixel Art Platformer - Plain
+  packageVersion: 1.0
+  assetPath: Assets/2D Pixel Art Platformer - Plain/tilemap/tile assets/bush_4.asset
+  uploadId: 777782

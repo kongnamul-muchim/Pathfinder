@@ -1,0 +1,13 @@
+{
+  "name": "com.pathfinder.core",
+  "version": "1.0.0",
+  "displayName": "Pathfinder Core",
+  "description": "Core DI Container and interfaces for Pathfinder framework",
+  "unity": "2022.3",
+  "keywords": ["di", "dependency-injection", "core", "unity"],
+  "author": {
+    "name": "Pathfinder Team"
+  },
+  "dependencies": {},
+  "type": "library"
+}

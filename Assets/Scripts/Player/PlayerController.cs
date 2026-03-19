@@ -14,6 +14,12 @@ namespace Pathfinder.Player
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour
     {
+        private const float DOUBLE_TAP_RESET_TIME = -999f;
+        private const float INPUT_THRESHOLD = 0.5f;
+        private const float VELOCITY_THRESHOLD = 0.1f;
+        private const float ANIMATION_THRESHOLD = 0.01f;
+        private const float GROUND_CHECK_LOCAL_Y = -0.5f;
+        
         [Header("Movement")]
         [SerializeField] private float _moveSpeed = 5f;
         
@@ -99,8 +105,8 @@ namespace Pathfinder.Player
         // 대쉬
         private bool _canDash = true;
         private bool _isDashing = false;
-        private float _lastLeftTapTime = -999f;
-        private float _lastRightTapTime = -999f;
+        private float _lastLeftTapTime = DOUBLE_TAP_RESET_TIME;
+        private float _lastRightTapTime = DOUBLE_TAP_RESET_TIME;
         private bool _lastLeftKeyState = false;
         private bool _lastRightKeyState = false;
         
@@ -141,7 +147,7 @@ namespace Pathfinder.Player
             {
                 var groundCheckObj = new GameObject("GroundCheck");
                 groundCheckObj.transform.SetParent(transform);
-                groundCheckObj.transform.localPosition = new Vector3(0, -0.5f, 0);
+                groundCheckObj.transform.localPosition = new Vector3(0, GROUND_CHECK_LOCAL_Y, 0);
                 _groundCheck = groundCheckObj.transform;
             }
         }
@@ -172,15 +178,22 @@ namespace Pathfinder.Player
         
         private void Start()
         {
-            // DI 주입 확인 및 복구
             if (_abilityManager == null)
             {
                 _abilityManager = FindFirstObjectByType<AbilityManager>();
+                if (_abilityManager == null)
+                {
+                    Debug.LogWarning("[PlayerController] AbilityManager not found!");
+                }
             }
             
             if (_deathManager == null)
             {
                 _deathManager = FindFirstObjectByType<DeathManager>();
+                if (_deathManager == null)
+                {
+                    Debug.LogWarning("[PlayerController] DeathManager not found!");
+                }
             }
         }
         
@@ -285,8 +298,8 @@ namespace Pathfinder.Player
             float currentTime = Time.time;
             
             // 현재 키 상태 확인
-            bool leftKeyPressed = _horizontalInput < -0.5f;
-            bool rightKeyPressed = _horizontalInput > 0.5f;
+            bool leftKeyPressed = _horizontalInput < -INPUT_THRESHOLD;
+            bool rightKeyPressed = _horizontalInput > INPUT_THRESHOLD;
             
             // 왼쪽 키가 방금 눌림 (이전에는 안 려있었고 지금은 눌려있음)
             if (leftKeyPressed && !_lastLeftKeyState)
@@ -295,7 +308,7 @@ namespace Pathfinder.Player
                 if (currentTime - _lastLeftTapTime < _doubleTapTime)
                 {
                     StartCoroutine(DashCoroutine(-1));
-                    _lastLeftTapTime = -999f; // 리셋
+                    _lastLeftTapTime = DOUBLE_TAP_RESET_TIME;
                 }
                 else
                 {
@@ -310,7 +323,7 @@ namespace Pathfinder.Player
                 if (currentTime - _lastRightTapTime < _doubleTapTime)
                 {
                     StartCoroutine(DashCoroutine(1));
-                    _lastRightTapTime = -999f; // 리셋
+                    _lastRightTapTime = DOUBLE_TAP_RESET_TIME;
                 }
                 else
                 {
@@ -423,7 +436,7 @@ namespace Pathfinder.Player
         private Vector2? FindSafePositionX()
         {
             float direction = Mathf.Sign(_rb.linearVelocity.x);
-            if (Mathf.Abs(_rb.linearVelocity.x) < 0.1f) direction = 1f;
+            if (Mathf.Abs(_rb.linearVelocity.x) < VELOCITY_THRESHOLD) direction = 1f;
             
             Vector2? found = SearchInDirection(direction);
             if (found.HasValue) return found;
@@ -457,18 +470,15 @@ namespace Pathfinder.Player
             if (_playerAnimator == null) return;
             
             // 걷기 상태
-            bool isWalking = Mathf.Abs(_horizontalInput) > 0.01f && _isGrounded;
+            bool isWalking = Mathf.Abs(_horizontalInput) > ANIMATION_THRESHOLD && _isGrounded;
             _playerAnimator.SetWalking(isWalking);
             
-            // 점프 상태 (공중에 있을 때)
-            bool isJumping = !_isGrounded && _rb.linearVelocity.y > 0.1f;
+            bool isJumping = !_isGrounded && _rb.linearVelocity.y > VELOCITY_THRESHOLD;
             _playerAnimator.SetJumping(isJumping);
             
-            // 지면 상태
             _playerAnimator.SetGrounded(_isGrounded);
             
-            // 방향 전환
-            if (Mathf.Abs(_horizontalInput) > 0.01f)
+            if (Mathf.Abs(_horizontalInput) > ANIMATION_THRESHOLD)
             {
                 _playerAnimator.SetFacingDirection(_horizontalInput);
             }
@@ -494,7 +504,7 @@ namespace Pathfinder.Player
             
             HandleStepUp();
             
-            if (!_isDashing && Mathf.Abs(_horizontalInput) > 0.1f && Mathf.Abs(_rb.linearVelocity.x) < 0.1f)
+            if (!_isDashing && Mathf.Abs(_horizontalInput) > VELOCITY_THRESHOLD && Mathf.Abs(_rb.linearVelocity.x) < VELOCITY_THRESHOLD)
             {
                 velocity = _rb.linearVelocity;
                 velocity.x = _horizontalInput * 0.5f;
@@ -521,7 +531,7 @@ namespace Pathfinder.Player
         /// </summary>
         private void HandleStepUp()
         {
-            if (Mathf.Abs(_horizontalInput) < 0.01f) return;
+            if (Mathf.Abs(_horizontalInput) < ANIMATION_THRESHOLD) return;
             
             // 이동 방향
             float direction = Mathf.Sign(_horizontalInput);

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 41f53975680295948acac728db204b71
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 312391
+  packageName: 2D Pixel Art Platformer - Plain
+  packageVersion: 1.0
+  assetPath: Assets/2D Pixel Art Platformer - Plain/tilemap/tile assets/ground_5.asset
+  uploadId: 777782

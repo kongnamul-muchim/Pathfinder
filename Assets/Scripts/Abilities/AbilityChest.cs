@@ -49,7 +49,7 @@ namespace Pathfinder.Abilities
             // DI가 안 되었으면 씬에서 찾기
             if (_abilityManager == null)
             {
-                var abilityManager = FindObjectOfType<AbilityManager>();
+                var abilityManager = FindFirstObjectByType<AbilityManager>();
                 if (abilityManager != null)
                 {
                     _abilityManager = abilityManager;
@@ -150,7 +150,7 @@ namespace Pathfinder.Abilities
         private void ShowRewardPopup(string message)
         {
             // 플레이어 찾기
-            var player = FindObjectOfType<PlayerController>();
+            var player = FindFirstObjectByType<PlayerController>();
             if (player != null)
             {
                 // 플레이어의 PlayerRewardPopup 찾기

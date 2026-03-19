@@ -51,9 +51,18 @@ namespace Pathfinder.World
             BuildMapIndex();
             InitializeMaps();
             
-            // 참조 찾기
-            _saveManager = FindObjectOfType<SaveManager>();
-            _playerController = FindObjectOfType<PlayerController>();
+            _saveManager = FindFirstObjectByType<SaveManager>();
+            _playerController = FindFirstObjectByType<PlayerController>();
+            
+            if (_saveManager == null)
+            {
+                Debug.LogWarning("[MapManager] SaveManager not found!");
+            }
+            
+            if (_playerController == null)
+            {
+                Debug.LogWarning("[MapManager] PlayerController not found!");
+            }
         }
         
         private void Start()

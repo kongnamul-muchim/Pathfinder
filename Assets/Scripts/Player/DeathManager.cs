@@ -19,15 +19,33 @@ namespace Pathfinder.Player
         private void Awake()
         {
             if (_abilityManager == null)
+            {
                 _abilityManager = FindFirstObjectByType<AbilityManager>();
+                if (_abilityManager == null)
+                {
+                    Debug.LogWarning("[DeathManager] AbilityManager not found!");
+                }
+            }
             
             if (_saveManager == null)
+            {
                 _saveManager = FindFirstObjectByType<SaveManager>();
+                if (_saveManager == null)
+                {
+                    Debug.LogWarning("[DeathManager] SaveManager not found!");
+                }
+            }
             
             _mapManager = FindFirstObjectByType<MapManager>();
+            if (_mapManager == null)
+            {
+                Debug.LogWarning("[DeathManager] MapManager not found!");
+            }
             
             if (_gameOverUI == null)
+            {
                 _gameOverUI = FindFirstObjectByType<GameOverUI>();
+            }
         }
         
         private Vector3 _lastCheckpoint;
@@ -71,17 +89,21 @@ namespace Pathfinder.Player
         {
             Debug.Log("[DEATH] RollbackWithLife - Loading save and consuming life");
             
-            var saveManager = _saveManager as SaveManager;
-            string savedMapId = saveManager?.GetSavedMapId();
-            
-            if (!string.IsNullOrEmpty(savedMapId) && _mapManager != null)
-                _mapManager.SwitchToMap(savedMapId);
-            
-            _saveManager.Load(false);
-            _abilityManager?.ConsumeLife();
-            
-            int remainingLives = _abilityManager?.GetLives() ?? 0;
-            saveManager?.UpdateSavedLives(remainingLives);
+            if (_saveManager is SaveManager saveManager)
+            {
+                string savedMapId = saveManager.GetSavedMapId();
+                
+                if (!string.IsNullOrEmpty(savedMapId) && _mapManager != null)
+                {
+                    _mapManager.SwitchToMap(savedMapId);
+                }
+                
+                _saveManager.Load(false);
+                _abilityManager?.ConsumeLife();
+                
+                int remainingLives = _abilityManager?.GetLives() ?? 0;
+                saveManager.UpdateSavedLives(remainingLives);
+            }
             
             RespawnFromSave();
         }
@@ -90,8 +112,10 @@ namespace Pathfinder.Player
         {
             Debug.Log("[DEATH] RespawnAtSpawnPointWithLife - Resetting progress and spawning at SpawnPoint");
             
-            var saveManager = _saveManager as SaveManager;
-            saveManager?.ResetAllProgress();
+            if (_saveManager is SaveManager saveManager)
+            {
+                saveManager.ResetAllProgress();
+            }
             
             _abilityManager?.ConsumeLife();
             
@@ -100,21 +124,24 @@ namespace Pathfinder.Player
         
         private void RespawnAtSpawnPoint()
         {
-            if (_mapManager != null)
+            if (_mapManager == null) return;
+            
+            Vector3 spawnPosition = _mapManager.GetSpawnPosition(0);
+            RespawnPlayerAt(spawnPosition);
+        }
+        
+        private void RespawnPlayerAt(Vector3 position)
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) return;
+            
+            player.transform.position = position;
+            
+            var rb = player.GetComponent<Rigidbody2D>();
+            if (rb != null)
             {
-                Vector3 spawnPosition = _mapManager.GetSpawnPosition(0);
-                var player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null)
-                {
-                    player.transform.position = spawnPosition;
-                    
-                    var rb = player.GetComponent<Rigidbody2D>();
-                    if (rb != null)
-                    {
-                        rb.linearVelocity = Vector2.zero;
-                        rb.angularVelocity = 0f;
-                    }
-                }
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
             }
         }
         
@@ -137,18 +164,22 @@ namespace Pathfinder.Player
             if (_isRespawning) return;
             _isRespawning = true;
             
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-            {
-                var rb = player.GetComponent<Rigidbody2D>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector2.zero;
-                    rb.angularVelocity = 0f;
-                }
-            }
+            ResetPlayerVelocity();
             
             _isRespawning = false;
+        }
+        
+        private void ResetPlayerVelocity()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) return;
+            
+            var rb = player.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
         }
         
         public void Respawn()
@@ -156,19 +187,8 @@ namespace Pathfinder.Player
             if (_isRespawning) return;
             _isRespawning = true;
             
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-            {
-                Vector3 respawnPosition = _lastCheckpoint != Vector3.zero ? _lastCheckpoint : Vector3.zero;
-                player.transform.position = respawnPosition;
-                
-                var rb = player.GetComponent<Rigidbody2D>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector2.zero;
-                    rb.angularVelocity = 0f;
-                }
-            }
+            Vector3 respawnPosition = _lastCheckpoint != Vector3.zero ? _lastCheckpoint : Vector3.zero;
+            RespawnPlayerAt(respawnPosition);
             
             _isRespawning = false;
         }

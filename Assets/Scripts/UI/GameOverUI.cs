@@ -13,18 +13,34 @@ namespace Pathfinder.UI
         
         private void Awake()
         {
-            _saveManager = FindObjectOfType<SaveManager>();
-            
-            if (_gameOverPanel != null)
-                _gameOverPanel.SetActive(false);
+            _saveManager = FindFirstObjectByType<SaveManager>();
+            SetPanelActive(false);
         }
         
         public void Show()
         {
-            if (_gameOverPanel != null)
-                _gameOverPanel.SetActive(true);
-            
             Time.timeScale = 0f;
+            
+            if (_gameOverPanel == null)
+            {
+                Debug.LogError("[GameOverUI] _gameOverPanel is null! Assign the GameOver panel GameObject in Inspector.");
+                return;
+            }
+            
+            SetPanelActive(true);
+            Debug.Log("[GameOverUI] GameOver panel activated");
+        }
+        
+        private void SetPanelActive(bool active)
+        {
+            if (_gameOverPanel == null) return;
+            
+            _gameOverPanel.SetActive(active);
+            
+            foreach (Transform child in _gameOverPanel.transform)
+            {
+                child.gameObject.SetActive(active);
+            }
         }
         
         public void OnRestartClick()

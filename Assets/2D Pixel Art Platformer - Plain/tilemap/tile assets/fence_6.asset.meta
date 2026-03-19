@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 15a26ed8f04b3794988c27a1a60b7a14
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 312391
+  packageName: 2D Pixel Art Platformer - Plain
+  packageVersion: 1.0
+  assetPath: Assets/2D Pixel Art Platformer - Plain/tilemap/tile assets/fence_6.asset
+  uploadId: 777782

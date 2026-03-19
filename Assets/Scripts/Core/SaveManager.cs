@@ -62,9 +62,9 @@ namespace Pathfinder.Core
         private void Start()
         {
             // DI 주입 받기
-            _abilityManager = FindObjectOfType<AbilityManager>();
-            _playerController = FindObjectOfType<PlayerController>();
-            _mapManager = FindObjectOfType<MapManager>();
+            _abilityManager = FindFirstObjectByType<AbilityManager>();
+            _playerController = FindFirstObjectByType<PlayerController>();
+            _mapManager = FindFirstObjectByType<MapManager>();
             
             // MapManager 이벤트 구독
             if (_mapManager != null)
@@ -245,7 +245,7 @@ namespace Pathfinder.Core
                 Debug.Log("[SAVE] Abilities reset (lives preserved)");
             }
             
-            var chests = FindObjectsOfType<AbilityChest>();
+            var chests = FindObjectsByType<AbilityChest>(FindObjectsSortMode.None);
             foreach (var chest in chests)
             {
                 chest.ResetChest();
@@ -306,8 +306,9 @@ namespace Pathfinder.Core
                 GameSaveData data = JsonUtility.FromJson<GameSaveData>(json);
                 return data?.currentMapId ?? string.Empty;
             }
-            catch
+            catch (System.Exception ex)
             {
+                Debug.LogError($"[SAVE ERROR] GetSavedMapId failed: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -347,7 +348,7 @@ namespace Pathfinder.Core
         private List<ChestStateData> GetAbilityChestStates()
         {
             var states = new List<ChestStateData>();
-            var chests = FindObjectsOfType<AbilityChest>();
+            var chests = FindObjectsByType<AbilityChest>(FindObjectsSortMode.None);
             
             foreach (var chest in chests)
             {
@@ -361,13 +362,10 @@ namespace Pathfinder.Core
             return states;
         }
         
-        /// <summary>
-        /// 목숨 상자 상태만 가져오기
-        /// </summary>
         private List<ChestStateData> GetExtraLifeChestStates()
         {
             var states = new List<ChestStateData>();
-            var chests = FindObjectsOfType<AbilityChest>();
+            var chests = FindObjectsByType<AbilityChest>(FindObjectsSortMode.None);
             
             foreach (var chest in chests)
             {
@@ -429,7 +427,7 @@ namespace Pathfinder.Core
         {
             if (chestStates == null) return;
             
-            var chests = FindObjectsOfType<AbilityChest>();
+            var chests = FindObjectsByType<AbilityChest>(FindObjectsSortMode.None);
             var chestDict = new Dictionary<string, AbilityChest>();
             
             foreach (var chest in chests)
@@ -479,7 +477,7 @@ namespace Pathfinder.Core
         {
             if (chestStates == null) return;
             
-            var chests = FindObjectsOfType<AbilityChest>();
+            var chests = FindObjectsByType<AbilityChest>(FindObjectsSortMode.None);
             var chestDict = new Dictionary<string, AbilityChest>();
             
             foreach (var chest in chests)

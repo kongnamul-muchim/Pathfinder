@@ -13,51 +13,24 @@ namespace Pathfinder.Core
     {
         public override void Install(DIContainer container)
         {
-            // 능력 관리자 (씬에서 찾거나 없으면 생성)
-            var abilityManager = UnityEngine.Object.FindObjectOfType<AbilityManager>();
-            if (abilityManager == null)
+            RegisterServiceFromScene<AbilityManager, IAbilityManager>(container);
+            RegisterServiceFromScene<DeathManager, IDeathManager>(container);
+            RegisterServiceFromScene<MapManager, IMapManager>(container);
+            RegisterServiceFromScene<SaveManager, ISaveManager>(container);
+        }
+        
+        private void RegisterServiceFromScene<TImplementation, TInterface>(DIContainer container)
+            where TImplementation : UnityEngine.Object, TInterface
+            where TInterface : class
+        {
+            var service = UnityEngine.Object.FindFirstObjectByType<TImplementation>();
+            if (service != null)
             {
-                // Player 오브젝트 찾기
-                var player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null)
-                {
-                    abilityManager = player.GetComponent<AbilityManager>();
-                    if (abilityManager == null)
-                    {
-                        abilityManager = player.AddComponent<AbilityManager>();
-                    }
-                }
-                else
-                {
-                    // Player 태그가 없으면 AbilityManager를 가진 오브젝트 찾기
-                    abilityManager = UnityEngine.Object.FindObjectOfType<AbilityManager>();
-                }
+                container.RegisterInstance<TInterface>(service);
             }
-            
-            if (abilityManager != null)
+            else
             {
-                container.RegisterInstance<IAbilityManager>(abilityManager);
-            }
-            
-            // 사망 관리자 (씬에서 찾아서 등록)
-            var deathManager = UnityEngine.Object.FindObjectOfType<DeathManager>();
-            if (deathManager != null)
-            {
-                container.RegisterInstance<IDeathManager>(deathManager);
-            }
-            
-            // 맵 관리자 (씬에서 찾아서 등록)
-            var mapManager = UnityEngine.Object.FindObjectOfType<MapManager>();
-            if (mapManager != null)
-            {
-                container.RegisterInstance<IMapManager>(mapManager);
-            }
-            
-            // 저장 관리자 (씬에서 찾아서 등록)
-            var saveManager = UnityEngine.Object.FindObjectOfType<SaveManager>();
-            if (saveManager != null)
-            {
-                container.RegisterInstance<ISaveManager>(saveManager);
+                Debug.LogWarning($"[{nameof(GameInstaller)}] {typeof(TImplementation).Name} not found in scene!");
             }
         }
     }

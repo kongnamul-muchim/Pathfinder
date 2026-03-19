@@ -9,6 +9,9 @@ namespace Pathfinder.Traps
     [RequireComponent(typeof(Collider2D))]
     public class SpikeTrap : MonoBehaviour
     {
+        private const string TRAP_TAG = "Trap";
+        private const string PLAYER_TAG = "Player";
+        
         [Header("Visual")]
         [Tooltip("충돌 시 이펙트 (선택사항)")]
         [SerializeField] private ParticleSystem _hitEffect;
@@ -34,9 +37,9 @@ namespace Pathfinder.Traps
             collider.isTrigger = true;
             
             // 태그 설정
-            if (!CompareTag("Trap"))
+            if (!CompareTag(TRAP_TAG))
             {
-                tag = "Trap";
+                tag = TRAP_TAG;
             }
             
             // AudioSource 설정
@@ -51,7 +54,7 @@ namespace Pathfinder.Traps
         private void OnTriggerEnter2D(Collider2D other)
         {
             // 플레이어 확인
-            if (!other.CompareTag("Player")) return;
+            if (!other.CompareTag(PLAYER_TAG)) return;
             
             // 이펙트 재생
             if (_hitEffect != null)

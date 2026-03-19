@@ -9,6 +9,8 @@ namespace Pathfinder.World
     public class WarpPoint : MonoBehaviour, ICheckpoint, IInteractable
     {
         private const string PLAYER_TAG = "Player";
+        private const string CHECKPOINT_KEY_PREFIX = "Checkpoint_";
+        private const string LAST_CHECKPOINT_KEY = "LastCheckpointId";
 
         [Header("Warp Point Settings")]
         [SerializeField] private string _warpPointId;
@@ -97,9 +99,9 @@ namespace Pathfinder.World
 
         private void ResolveServices()
         {
-            _saveManager ??= FindObjectOfType<SaveManager>();
-            _deathManager ??= FindObjectOfType<DeathManager>();
-            _mapManager ??= FindObjectOfType<MapManager>();
+            _saveManager ??= FindFirstObjectByType<SaveManager>();
+            _deathManager ??= FindFirstObjectByType<DeathManager>();
+            _mapManager ??= FindFirstObjectByType<MapManager>();
             
             if (_saveManager == null)
                 Debug.LogError($"[WARP] {gameObject.name}: SaveManager not found!");
@@ -127,41 +129,29 @@ namespace Pathfinder.World
 
                 OnWarpStarted?.Invoke(_warpPointId, transform.position);
 
+                // 워프 후 저장 예약 (맵 전환 완료 후 SaveManager.OnMapChanged에서 실행)
+                Vector3 targetPosition = GetTargetPosition();
+                if (_saveManager != null && !string.IsNullOrEmpty(_targetMapId))
+                {
+                    Debug.Log($"[WARP] Reserving warp save - Map: {_targetMapId}, Position: {targetPosition}");
+                    _saveManager.ReserveWarpSave(_targetMapId, targetPosition);
+                }
+                
+                // 체크포인트도 목적지로 설정
+                if (_deathManager != null)
+                {
+                    _deathManager.SetCheckpoint(targetPosition);
+                    Debug.Log($"[WARP] Checkpoint set to target: {targetPosition}");
+                }
+
                 if (!string.IsNullOrEmpty(_targetMapId))
                 {
                     Debug.Log("[WARP] Starting PerformWarp...");
                     yield return StartCoroutine(PerformWarp());
-                    Debug.Log("[WARP] PerformWarp completed");
+                    Debug.Log("[WARP] PerformWarp completed (or interrupted by map change)");
                 }
 
                 OnWarpCompleted?.Invoke(_targetWarpPointId, GetTargetPosition());
-                
-                // 도착지에서 저장 (맵 전환 완료 후)
-                // 맵 전환과 위치 확정이 완료된 후 저장
-                Debug.Log("[WARP] Waiting 0.1s before save...");
-                yield return new WaitForSeconds(0.1f); // 맵 전환 완료 대기
-                Debug.Log($"[WARP] Save check - _saveManager: {_saveManager != null}");
-                if (_saveManager != null)
-                {
-                    Debug.Log("[WARP] Calling Save()...");
-                    _saveManager.Save();
-                    Debug.Log("[WARP] Save() completed");
-                }
-                else
-                {
-                    Debug.LogError("[WARP] SaveManager is null! Cannot save.");
-                }
-                
-                // 체크포인트도 도착지로 설정
-                if (_deathManager != null)
-                {
-                    GameObject player = GameObject.FindGameObjectWithTag(PLAYER_TAG);
-                    if (player != null)
-                    {
-                        _deathManager.SetCheckpoint(player.transform.position);
-                        Debug.Log($"[WARP] Checkpoint set: {player.transform.position}");
-                    }
-                }
                 
                 Debug.Log("[WARP] WarpSequence END");
             }
@@ -187,10 +177,17 @@ namespace Pathfinder.World
 
         private IEnumerator PerformWarp()
         {
+            Debug.Log($"[WARP] PerformWarp - Getting target position...");
             Vector3 targetPosition = GetTargetPosition();
+            Debug.Log($"[WARP] PerformWarp - Target position: {targetPosition}");
 
             GameObject player = GameObject.FindGameObjectWithTag(PLAYER_TAG);
-            if (player == null) yield break;
+            Debug.Log($"[WARP] PerformWarp - Player found: {player != null}");
+            if (player == null)
+            {
+                Debug.LogError("[WARP] PerformWarp - Player is NULL! Yield break.");
+                yield break;
+            }
 
             var rb = player.GetComponent<Rigidbody2D>();
             if (rb != null)
@@ -199,15 +196,23 @@ namespace Pathfinder.World
                 rb.angularVelocity = 0f;
             }
 
+            Debug.Log($"[WARP] PerformWarp - Moving player to {targetPosition}");
             player.transform.position = targetPosition;
+            
+            Debug.Log("[WARP] PerformWarp - Waiting for FixedUpdate...");
             yield return new WaitForFixedUpdate();
+            Debug.Log("[WARP] PerformWarp - After WaitForFixedUpdate");
 
             if (_mapManager != null && !string.IsNullOrEmpty(_targetMapId))
             {
+                Debug.Log($"[WARP] PerformWarp - Switching to map: {_targetMapId}");
                 _mapManager.SwitchToMap(_targetMapId);
                 yield return null;
                 player.transform.position = targetPosition;
+                Debug.Log("[WARP] PerformWarp - Map switched, position set");
             }
+            
+            Debug.Log("[WARP] PerformWarp - END");
         }
 
         private Vector3 GetTargetPosition()
@@ -234,7 +239,7 @@ namespace Pathfinder.World
 
         private WarpPoint FindTargetWarpPoint(string warpPointId)
         {
-            var warpPoints = FindObjectsOfType<WarpPoint>();
+            var warpPoints = FindObjectsByType<WarpPoint>(FindObjectsSortMode.None);
             foreach (var warpPoint in warpPoints)
             {
                 if (warpPoint._warpPointId == warpPointId && warpPoint != this)
@@ -251,10 +256,11 @@ namespace Pathfinder.World
 
         private void SaveCheckpointToPlayerPrefs()
         {
-            PlayerPrefs.SetFloat($"Checkpoint_{_warpPointId}_X", transform.position.x);
-            PlayerPrefs.SetFloat($"Checkpoint_{_warpPointId}_Y", transform.position.y);
-            PlayerPrefs.SetFloat($"Checkpoint_{_warpPointId}_Z", transform.position.z);
-            PlayerPrefs.SetString("LastCheckpointId", _warpPointId);
+            string prefix = $"{CHECKPOINT_KEY_PREFIX}{_warpPointId}_";
+            PlayerPrefs.SetFloat($"{prefix}X", transform.position.x);
+            PlayerPrefs.SetFloat($"{prefix}Y", transform.position.y);
+            PlayerPrefs.SetFloat($"{prefix}Z", transform.position.z);
+            PlayerPrefs.SetString(LAST_CHECKPOINT_KEY, _warpPointId);
             PlayerPrefs.Save();
         }
 
