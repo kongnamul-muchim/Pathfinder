@@ -16,6 +16,10 @@ namespace Pathfinder.World
         [Tooltip("텍스처 반복 (가로, 세로)")]
         [SerializeField] private Vector2 _tiling = Vector2.one;
         
+        [Header("Shader")]
+        [Tooltip("Offset 프로퍼티 이름 (기본: _MainTex)")]
+        [SerializeField] private string _textureProperty = "_MainTex";
+        
         [Header("Sorting")]
         [Tooltip("렌더링 순서 (낮을수록 뒤)")]
         [SerializeField] private int _orderInLayer = -100;
@@ -26,6 +30,7 @@ namespace Pathfinder.World
         private SpriteRenderer _spriteRenderer;
         private Material _material;
         private float _textureWidth;
+        private int _texturePropertyId;
         
         private void Start()
         {
@@ -36,13 +41,15 @@ namespace Pathfinder.World
             if (_spriteRenderer != null)
             {
                 _material = _spriteRenderer.material;
+                _texturePropertyId = Shader.PropertyToID(_textureProperty);
                 
                 if (_spriteRenderer.sprite != null)
                 {
                     _textureWidth = _spriteRenderer.sprite.bounds.size.x;
+                    Debug.Log($"[ParallaxLayer] TextureWidth: {_textureWidth}");
                 }
                 
-                _material.mainTextureScale = _tiling;
+                _material.SetTextureScale(_texturePropertyId, _tiling);
             }
             
             ApplySortingSettings();
@@ -63,10 +70,28 @@ namespace Pathfinder.World
         
         private void LateUpdate()
         {
-            if (_player == null || _material == null || _textureWidth <= 0) return;
+            if (_player == null)
+            {
+                Debug.LogWarning("[ParallaxLayer] Player is null!");
+                return;
+            }
+            
+            if (_material == null)
+            {
+                Debug.LogWarning("[ParallaxLayer] Material is null!");
+                return;
+            }
+            
+            if (_textureWidth <= 0)
+            {
+                Debug.LogWarning($"[ParallaxLayer] TextureWidth invalid: {_textureWidth}");
+                return;
+            }
             
             float offsetX = _player.position.x * (1 - _parallaxSpeed) / _textureWidth;
-            _material.mainTextureOffset = new Vector2(offsetX, 0);
+            Debug.Log($"[ParallaxLayer] Player X: {_player.position.x:F2}, Speed: {_parallaxSpeed}, Offset: {offsetX:F4}");
+            
+            _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
         }
         
         public void SetParallaxSpeed(float speed)
