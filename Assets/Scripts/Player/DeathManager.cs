@@ -23,15 +23,15 @@ namespace Pathfinder.Player
         private void Awake()
         {
             if (_abilityManager == null)
-                _abilityManager = FindObjectOfType<AbilityManager>();
+                _abilityManager = FindFirstObjectByType<AbilityManager>();
             
             if (_saveManager == null)
-                _saveManager = FindObjectOfType<SaveManager>();
+                _saveManager = FindFirstObjectByType<SaveManager>();
             
-            _mapManager = FindObjectOfType<MapManager>();
+            _mapManager = FindFirstObjectByType<MapManager>();
             
             if (_gameOverUI == null)
-                _gameOverUI = FindObjectOfType<GameOverUI>();
+                _gameOverUI = FindFirstObjectByType<GameOverUI>();
         }
         
         // 마지막 체크포인트 위치
@@ -127,6 +127,7 @@ namespace Pathfinder.Player
                     {
                         rb.linearVelocity = Vector2.zero;
                         rb.angularVelocity = 0f;
+                        rb.bodyType = RigidbodyType2D.Kinematic;
                     }
                     
                     StartCoroutine(InvincibilityCoroutine());
@@ -156,19 +157,17 @@ namespace Pathfinder.Player
             if (_isRespawning) return;
             _isRespawning = true;
             
-            // 플레이어 찾기
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
-                // 물리 속도 리셋
                 var rb = player.GetComponent<Rigidbody2D>();
                 if (rb != null)
                 {
                     rb.linearVelocity = Vector2.zero;
                     rb.angularVelocity = 0f;
+                    rb.bodyType = RigidbodyType2D.Kinematic;
                 }
                 
-                // 무적 상태 시작
                 StartCoroutine(InvincibilityCoroutine());
             }
             
@@ -183,23 +182,20 @@ namespace Pathfinder.Player
             if (_isRespawning) return;
             _isRespawning = true;
             
-            // 플레이어 찾기
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
-                // 체크포인트 위치로 이동
                 Vector3 respawnPosition = _lastCheckpoint != Vector3.zero ? _lastCheckpoint : Vector3.zero;
                 player.transform.position = respawnPosition;
                 
-                // 물리 속도 리셋
                 var rb = player.GetComponent<Rigidbody2D>();
                 if (rb != null)
                 {
                     rb.linearVelocity = Vector2.zero;
                     rb.angularVelocity = 0f;
+                    rb.bodyType = RigidbodyType2D.Kinematic;
                 }
                 
-                // 무적 상태 시작
                 StartCoroutine(InvincibilityCoroutine());
             }
             
@@ -213,27 +209,29 @@ namespace Pathfinder.Player
         {
             _isInvincible = true;
             
-            // 플레이어의 충돌 임시 비활성화
             var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
+            if (player == null)
             {
-                var collider = player.GetComponent<Collider2D>();
-                if (collider != null)
-                {
-                    collider.enabled = false;
-                }
+                _isInvincible = false;
+                yield break;
+            }
+            
+            var collider = player.GetComponent<Collider2D>();
+            var rb = player.GetComponent<Rigidbody2D>();
+            
+            bool wasKinematic = false;
+            if (rb != null)
+            {
+                wasKinematic = rb.bodyType == RigidbodyType2D.Kinematic;
+                rb.bodyType = RigidbodyType2D.Kinematic;
             }
             
             yield return new WaitForSeconds(_respawnInvincibilityTime);
             
-            // 충돌 다시 활성화
-            if (player != null)
+            if (rb != null && !wasKinematic)
             {
-                var collider = player.GetComponent<Collider2D>();
-                if (collider != null)
-                {
-                    collider.enabled = true;
-                }
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.linearVelocity = Vector2.zero;
             }
             
             _isInvincible = false;

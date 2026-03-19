@@ -31,6 +31,8 @@ namespace Pathfinder.World
         {
             _spriteRenderer = GetComponent<SpriteRenderer>();
             
+            if (!Application.isPlaying) return;
+            
             if (_spriteRenderer != null)
             {
                 _material = _spriteRenderer.material;

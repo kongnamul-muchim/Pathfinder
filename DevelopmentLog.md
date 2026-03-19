@@ -43,6 +43,22 @@ Backgrounds
 
 ---
 
+## 2026-03-19: Bug Fixes
+
+### ParallaxLayer Material 누출 수정
+- `[ExecuteInEditMode]` 상태에서 `renderer.material` 호출 시 Material 인스턴스 누출
+- `Application.isPlaying` 체크로 Play 모드에서만 Material 접근
+
+### 사망 시 바닥 밑으로 떨어지는 현상 수정
+- **문제**: 무적 상태에서 Collider 비활성화 → 중력으로 떨어짐 → Collider 활성화 시 지형 뚫고 낙하
+- **해결**: Collider 비활성화 대신 Rigidbody를 Kinematic으로 변경
+  - 무적 시작: `rb.bodyType = Kinematic`
+  - 무적 종료: `rb.bodyType = Dynamic`
+
+### Commit: 9b447d2
+
+---
+
 ## 2026-03-18: Dash Collider System
 
 ### 대쉬 시 Collider 축소 기능
