@@ -4,42 +4,48 @@
 
 ---
 
-## 2026-03-19: Parallax Background System (Material Offset)
+## 2026-03-19: Parallax System Simplified
 
-### Material Offset 기반 패럴랙스 배경
-- 기존 Transform 이동 방식 → Material Texture Offset 방식으로 변경
-- 단일 오브젝트로 무한 스크롤 구현 (오브젝트 복제 불필요)
-- Draw Call 최적화
+### 문제 해결
+1. **Offset 미작동**: `_MainTex` → `_BaseMap`으로 변경 (URP 호환)
+2. **버벅거림**: Transform 즉시 이동 → `Lerp`로 부드러운 이동
+3. **TextureWidth 불필요**: 단순화된 Offset 계산
 
-### ParallaxLayer 변경사항
-- `_material.mainTextureOffset` 조정으로 배경 이동
-- `_tiling`: 텍스처 반복 설정 (Vector2)
-- Player 위치 기반 Offset 계산: `playerX * (1 - speed) / textureWidth`
+### ParallaxLayer.cs 변경사항
+```csharp
+// Transform 부드러운 이동
+Vector3 targetPosition = new Vector3(cameraX, _initialPosition.y, _initialPosition.z);
+transform.position = Vector3.Lerp(transform.position, targetPosition, _smoothSpeed * Time.deltaTime);
+
+// 단순화된 Offset 계산
+float offsetX = cameraX * _parallaxSpeed * _offsetMultiplier;
+_material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
+```
 
 ### Inspector 설정
-- `Player`: 플레이어 Transform 할당 (필수)
-- `Parallax Speed`: 0~1 (0=고정, 1=따라감)
-- `Tiling`: 텍스처 반복 (기본 1,1)
-- `Order In Layer`: 렌더링 순서 (낮을수록 뒤)
-- `Sorting Layer Name`: "Background"
+| 필드 | 기본값 | 설명 |
+|------|--------|------|
+| Parallax Speed | 0.5 | 0~1: 낮을수록 풍경 변화 느림 |
+| Offset Multiplier | 1.0 | Offset 배수 |
+| Smooth Speed | 5.0 | 부드러운 이동 속도 |
+| Texture Property | `_BaseMap` | URP용 텍스처 프로퍼티 |
 
-### Unity 설정
-```
-Backgrounds
-├── Layer_0 (SpriteRenderer + ParallaxLayer)
-│   ├── Parallax Speed: 0.1
-│   └── Order In Layer: -100
-├── Layer_1 (SpriteRenderer + ParallaxLayer)
-│   ├── Parallax Speed: 0.3
-│   └── Order In Layer: -50
-...
-```
+### Speed 설정 예시
+| 배경 | Speed | 효과 |
+|------|-------|------|
+| Layer_0 (가장 먼) | 0.1 | 가장 느린 풍경 변화 |
+| Layer_2 (중간) | 0.5 | 중간 속도 |
+| Layer_4 (가장 가까운) | 0.9 | 가장 빠른 풍경 변화 |
 
 ### 주의사항
 - Texture Wrap Mode: `Repeat` 설정 필수
-- `renderer.material` 사용 시 자동으로 인스턴스 생성
+- URP Shader에서는 `_BaseMap` 사용 (Sprites/Default는 `_MainTex`)
 
-### Commit: 088b995
+### Commit: (예정)
+
+---
+
+## 2026-03-19: Parallax Background System (Material Offset)
 
 ---
 

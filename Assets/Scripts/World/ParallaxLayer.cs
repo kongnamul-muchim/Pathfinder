@@ -10,18 +10,18 @@ namespace Pathfinder.World
         [SerializeField] private Transform _camera;
         
         [Header("Parallax Settings")]
-        [Tooltip("패럴랙스 속도 (낮을수록 배경 풍경이 천천히 변화)")]
+        [Tooltip("패럴랙스 속도 (0~1: 낮을수록 풍경 변화가 느림)")]
         [SerializeField] private float _parallaxSpeed = 0.5f;
         
-        [Tooltip("Offset 배수 (값이 클수록 풍경 변화가 빠름)")]
+        [Tooltip("Offset 배수 (값이 클수록 풍경 변화가 큼)")]
         [SerializeField] private float _offsetMultiplier = 1f;
         
-        [Tooltip("텍스처 반복 (가로, 세로)")]
-        [SerializeField] private Vector2 _tiling = Vector2.one;
+        [Tooltip("부드러운 이동 속도")]
+        [SerializeField] private float _smoothSpeed = 5f;
         
         [Header("Shader")]
-        [Tooltip("Offset 프로퍼티 이름")]
-        [SerializeField] private string _textureProperty = "_MainTex";
+        [Tooltip("Offset 적용할 텍스처 프로퍼티 이름")]
+        [SerializeField] private string _textureProperty = "_BaseMap";
         
         [Header("Sorting")]
         [Tooltip("렌더링 순서 (낮을수록 뒤)")]
@@ -32,7 +32,6 @@ namespace Pathfinder.World
         
         private SpriteRenderer _spriteRenderer;
         private Material _material;
-        private float _textureWidth;
         private int _texturePropertyId;
         private Vector3 _initialPosition;
         
@@ -50,13 +49,6 @@ namespace Pathfinder.World
             {
                 _material = _spriteRenderer.material;
                 _texturePropertyId = Shader.PropertyToID(_textureProperty);
-                
-                if (_spriteRenderer.sprite != null)
-                {
-                    _textureWidth = _spriteRenderer.sprite.bounds.size.x;
-                }
-                
-                _material.SetTextureScale(_texturePropertyId, _tiling);
             }
             
             ApplySortingSettings();
@@ -85,15 +77,14 @@ namespace Pathfinder.World
             
             float cameraX = _camera.position.x;
             
-            // Transform: 카메라 따라감 (화면에 항상 보임)
-            transform.position = new Vector3(cameraX, _initialPosition.y, _initialPosition.z);
+            Vector3 targetPosition = new Vector3(cameraX, _initialPosition.y, _initialPosition.z);
+            transform.position = Vector3.Lerp(transform.position, targetPosition, _smoothSpeed * Time.deltaTime);
             
             if (!Application.isPlaying) return;
             
-            if (_material == null || _textureWidth <= 0) return;
+            if (_material == null) return;
             
-            // Texture Offset: Speed와 Multiplier 조합
-            float offsetX = cameraX * (1 - _parallaxSpeed) * _offsetMultiplier / _textureWidth;
+            float offsetX = cameraX * _parallaxSpeed * _offsetMultiplier;
             _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
         }
         
