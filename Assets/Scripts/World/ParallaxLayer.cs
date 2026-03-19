@@ -6,18 +6,18 @@ namespace Pathfinder.World
     public class ParallaxLayer : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("플레이어 Transform (필수)")]
-        [SerializeField] private Transform _player;
+        [Tooltip("카메라 Transform (필수)")]
+        [SerializeField] private Transform _camera;
         
         [Header("Parallax Settings")]
-        [Tooltip("패럴랙스 속도 (0=고정, 1=Player 따라감)")]
+        [Tooltip("패럴랙스 속도 (0=완전 고정, 1=카메라 완전 따라감)")]
         [SerializeField] private float _parallaxSpeed = 0.5f;
         
         [Tooltip("텍스처 반복 (가로, 세로)")]
         [SerializeField] private Vector2 _tiling = Vector2.one;
         
         [Header("Shader")]
-        [Tooltip("Offset 프로퍼티 이름 (기본: _MainTex)")]
+        [Tooltip("Offset 프로퍼티 이름")]
         [SerializeField] private string _textureProperty = "_MainTex";
         
         [Header("Sorting")]
@@ -31,10 +31,15 @@ namespace Pathfinder.World
         private Material _material;
         private float _textureWidth;
         private int _texturePropertyId;
+        private Vector3 _initialPosition;
         
         private void Start()
         {
             _spriteRenderer = GetComponent<SpriteRenderer>();
+            _initialPosition = transform.position;
+            
+            if (_camera == null)
+                _camera = Camera.main?.transform;
             
             if (!Application.isPlaying) return;
             
@@ -46,7 +51,6 @@ namespace Pathfinder.World
                 if (_spriteRenderer.sprite != null)
                 {
                     _textureWidth = _spriteRenderer.sprite.bounds.size.x;
-                    Debug.Log($"[ParallaxLayer] TextureWidth: {_textureWidth}");
                 }
                 
                 _material.SetTextureScale(_texturePropertyId, _tiling);
@@ -70,38 +74,31 @@ namespace Pathfinder.World
         
         private void LateUpdate()
         {
-            if (_player == null)
+            if (_camera == null)
             {
-                Debug.LogWarning("[ParallaxLayer] Player is null!");
-                return;
+                _camera = Camera.main?.transform;
+                if (_camera == null) return;
             }
             
-            if (_material == null)
-            {
-                Debug.LogWarning("[ParallaxLayer] Material is null!");
-                return;
-            }
+            float cameraX = _camera.position.x;
             
-            if (_textureWidth <= 0)
-            {
-                Debug.LogWarning($"[ParallaxLayer] TextureWidth invalid: {_textureWidth}");
-                return;
-            }
+            // Transform 위치 업데이트 (카메라 따라감)
+            Vector3 newPosition = transform.position;
+            newPosition.x = _initialPosition.x + cameraX * _parallaxSpeed;
+            transform.position = newPosition;
             
-            float offsetX = _player.position.x * (1 - _parallaxSpeed) / _textureWidth;
-            Debug.Log($"[ParallaxLayer] Player X: {_player.position.x:F2}, Speed: {_parallaxSpeed}, Offset: {offsetX:F4}");
+            if (!Application.isPlaying) return;
             
+            if (_material == null || _textureWidth <= 0) return;
+            
+            // Texture Offset (패럴랙스 효과)
+            float offsetX = cameraX * (1 - _parallaxSpeed) / _textureWidth;
             _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
         }
         
         public void SetParallaxSpeed(float speed)
         {
             _parallaxSpeed = Mathf.Clamp01(speed);
-        }
-        
-        public void SetPlayer(Transform player)
-        {
-            _player = player;
         }
         
         private void OnValidate()
