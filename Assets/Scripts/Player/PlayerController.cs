@@ -18,7 +18,6 @@ namespace Pathfinder.Player
         [SerializeField] private float _moveSpeed = 5f;
         
         [Header("Ground Detection")]
-        [SerializeField] private float _groundCheckDistance = 0.1f;
         [SerializeField] private float _stepHeight = 0.2f;
         [SerializeField] private float _stepCheckDistance = 0.1f;
         
@@ -28,13 +27,6 @@ namespace Pathfinder.Player
         
         [Tooltip("최대 경사로 각도 (도)")]
         [SerializeField] private float _maxSlopeAngle = 45f;
-        
-        [Header("Wall Detection")]
-        [SerializeField] private float _wallCheckDistance = 0.2f;  // 0.35f에서 감소
-        [SerializeField] private float _wallSlideSpeed = 2f;
-        [SerializeField] private LayerMask _wallLayer;
-        [Tooltip("벽으로 취급하지 않을 태그 (쉼표로 구분)")]
-        [SerializeField] private string[] _excludeWallTags = new string[] { "Platform", "MovingPlatform" };
         
         [Header("Jump")]
         [SerializeField] private float _jumpForce = 7f;
@@ -78,8 +70,6 @@ namespace Pathfinder.Player
         [Tooltip("상호작용 감지 반경")]
         [SerializeField] private float _interactionRadius = 2f;
         
-        private bool _isTouchingWall;
-        private float _wallDirection;
         private Rigidbody2D _rb;
         private bool _isGrounded;
         private float _horizontalInput;
@@ -109,7 +99,6 @@ namespace Pathfinder.Player
         // 대쉬
         private bool _canDash = true;
         private bool _isDashing = false;
-        private float _lastDashTime = -999f;
         private float _lastLeftTapTime = -999f;
         private float _lastRightTapTime = -999f;
         private bool _lastLeftKeyState = false;
@@ -155,12 +144,6 @@ namespace Pathfinder.Player
                 groundCheckObj.transform.localPosition = new Vector3(0, -0.5f, 0);
                 _groundCheck = groundCheckObj.transform;
             }
-            
-            // Wall Layer가 설정되지 않았으면 Ground Layer 사용
-            if (_wallLayer == 0)
-            {
-                _wallLayer = _groundLayer;
-            }
         }
         
         private void OnEnable()
@@ -192,12 +175,12 @@ namespace Pathfinder.Player
             // DI 주입 확인 및 복구
             if (_abilityManager == null)
             {
-                _abilityManager = FindObjectOfType<AbilityManager>();
+                _abilityManager = FindFirstObjectByType<AbilityManager>();
             }
             
             if (_deathManager == null)
             {
-                _deathManager = FindObjectOfType<DeathManager>();
+                _deathManager = FindFirstObjectByType<DeathManager>();
             }
         }
         
@@ -493,133 +476,44 @@ namespace Pathfinder.Player
         
         private void FixedUpdate()
         {
-            // 벽 감지
-            CheckWallCollision();
+            Vector2 velocity = _rb.linearVelocity;
             
-            // 이동 (벽에 닿지 않았을 때만)
-            if (!_isTouchingWall)
+            if (!_isDashing)
             {
-                Vector2 velocity = _rb.linearVelocity;
+                if (_useSlopeMovement && _isGrounded)
+                {
+                    velocity = GetSlopeMovementVelocity();
+                }
+                else
+                {
+                    velocity.x = _horizontalInput * _moveSpeed;
+                }
                 
-                // Dash 중에는 velocity를 직접 설정 (Dash 코루틴에서 처리)
-                // 그 외에는 수평 이동만 처리
-                if (!_isDashing)
-                {
-                    // 경사로 이동 처리
-                    if (_useSlopeMovement && _isGrounded)
-                    {
-                        velocity = GetSlopeMovementVelocity();
-                    }
-                    else
-                    {
-                        // 일반 수평 이동 (Y축은 건드리지 않음)
-                        velocity.x = _horizontalInput * _moveSpeed;
-                    }
-                    
-                    _rb.linearVelocity = velocity;
-                }
-            }
-            else
-            {
-                // 벽에 닿았을 때는 X축 이동 멈춤
-                Vector2 velocity = _rb.linearVelocity;
-                velocity.x = 0;
-                // Y축은 점프 중일 때 건드리지 않음
-                if (!_isGrounded && velocity.y > 0)
-                {
-                    // 점프 중일 때는 Y축 유지
-                }
-                else if (!_isGrounded && velocity.y < 0)
-                {
-                    // 낙하 중일 때만 미끄러짐 적용
-                    velocity.y = Mathf.Max(velocity.y, -_wallSlideSpeed);
-                }
                 _rb.linearVelocity = velocity;
             }
             
-            // 작은 단차(step) 자동 올라가기 (벽에 닿지 않았을 때만)
-            if (!_isTouchingWall)
+            HandleStepUp();
+            
+            if (!_isDashing && Mathf.Abs(_horizontalInput) > 0.1f && Mathf.Abs(_rb.linearVelocity.x) < 0.1f)
             {
-                HandleStepUp();
+                velocity = _rb.linearVelocity;
+                velocity.x = _horizontalInput * 0.5f;
+                _rb.linearVelocity = velocity;
             }
             
-            // 점프
             if (_jumpRequested)
             {
-                // 더블점프일 때는 Y축 velocity 리셋 (가속도 누적 방지)
                 if (_isDoubleJump)
                 {
-                    Vector2 velocity = _rb.linearVelocity;
-                    velocity.y = 0;
-                    _rb.linearVelocity = velocity;
+                    Vector2 jumpVel = _rb.linearVelocity;
+                    jumpVel.y = 0;
+                    _rb.linearVelocity = jumpVel;
                     _isDoubleJump = false;
                 }
                 
                 _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
                 _jumpRequested = false;
             }
-        }
-        
-        /// <summary>
-        /// 벽 충돌 감지
-        /// </summary>
-        private void CheckWallCollision()
-        {
-            if (Mathf.Abs(_horizontalInput) < 0.01f)
-            {
-                _isTouchingWall = false;
-                return;
-            }
-            
-            float direction = Mathf.Sign(_horizontalInput);
-            Vector2 position = transform.position;
-            
-            // 여러 지점에서 벽 체크 (더 정확한 감지)
-            Vector2[] checkPoints = new Vector2[]
-            {
-                position + Vector2.up * 0.3f,     // 상단 (0.5f에서 감소)
-                position,                         // 중앙
-                position + Vector2.down * 0.2f    // 하단 (0.3f에서 감소)
-            };
-            
-            _isTouchingWall = false;
-            foreach (var checkPoint in checkPoints)
-            {
-                RaycastHit2D wallHit = Physics2D.Raycast(
-                    checkPoint, 
-                    Vector2.right * direction, 
-                    _wallCheckDistance, 
-                    _wallLayer
-                );
-                
-                if (wallHit.collider != null)
-                {
-                    // 제외 태그 확인
-                    if (IsExcludedFromWall(wallHit.collider))
-                    {
-                        continue;
-                    }
-                    
-                    _isTouchingWall = true;
-                    _wallDirection = direction;
-                    break;
-                }
-            }
-        }
-        
-        /// <summary>
-        /// 벽으로 취급하지 않을 오브젝트인지 확인
-        /// </summary>
-        private bool IsExcludedFromWall(Collider2D collider)
-        {
-            foreach (var tag in _excludeWallTags)
-            {
-                if (collider.CompareTag(tag))
-                {
-                    return true;
-                }
-            }
-            return false;
         }
         
         /// <summary>
@@ -721,31 +615,15 @@ namespace Pathfinder.Player
                 Gizmos.DrawWireSphere(_groundCheck.position, _groundCheckRadius);
             }
             
-            // Step detection visualization
             if (Application.isPlaying && Mathf.Abs(_horizontalInput) > 0.01f)
             {
                 float direction = Mathf.Sign(_horizontalInput);
                 Vector2 position = transform.position;
                 
-                // Step up check
                 Vector2 rayStart = position + Vector2.right * direction * 0.3f;
                 rayStart.y -= 0.2f;
                 Gizmos.color = Color.yellow;
                 Gizmos.DrawLine(rayStart, rayStart + Vector2.down * _stepCheckDistance);
-                
-                // Wall check (3 points)
-                Vector2[] checkPoints = new Vector2[]
-                {
-                    position + Vector2.up * 0.5f,
-                    position,
-                    position + Vector2.down * 0.3f
-                };
-                
-                Gizmos.color = _isTouchingWall ? Color.magenta : Color.red;
-                foreach (var checkPoint in checkPoints)
-                {
-                    Gizmos.DrawLine(checkPoint, checkPoint + Vector2.right * direction * _wallCheckDistance);
-                }
             }
         }
         

@@ -8,10 +8,6 @@ namespace Pathfinder.Player
 {
     public class DeathManager : MonoBehaviour, IDeathManager
     {
-        [Header("Death Settings")]
-        [Tooltip("리스폰 시 무적 시간 (초)")]
-        [SerializeField] private float _respawnInvincibilityTime = 1f;
-        
         [Header("GameOver UI")]
         [SerializeField] private GameOverUI _gameOverUI;
         
@@ -34,22 +30,12 @@ namespace Pathfinder.Player
                 _gameOverUI = FindFirstObjectByType<GameOverUI>();
         }
         
-        // 마지막 체크포인트 위치
         private Vector3 _lastCheckpoint;
-        
-        // 사망 횟수
         private int _deathCount = 0;
-        
-        // 리스폰 중인지 여부
         private bool _isRespawning = false;
-        
-        // 무적 상태
-        private bool _isInvincible = false;
         
         public void OnPlayerDeath()
         {
-            if (_isInvincible) return;
-            
             bool hasSave = _saveManager != null && _saveManager.HasSaveData();
             int lives = _abilityManager?.GetLives() ?? 0;
             
@@ -127,10 +113,7 @@ namespace Pathfinder.Player
                     {
                         rb.linearVelocity = Vector2.zero;
                         rb.angularVelocity = 0f;
-                        rb.bodyType = RigidbodyType2D.Kinematic;
                     }
-                    
-                    StartCoroutine(InvincibilityCoroutine());
                 }
             }
         }
@@ -149,9 +132,6 @@ namespace Pathfinder.Player
             }
         }
         
-        /// <summary>
-        /// 저장 데이터에서 리스폰 처리 (Load 후 호출)
-        /// </summary>
         private void RespawnFromSave()
         {
             if (_isRespawning) return;
@@ -165,18 +145,12 @@ namespace Pathfinder.Player
                 {
                     rb.linearVelocity = Vector2.zero;
                     rb.angularVelocity = 0f;
-                    rb.bodyType = RigidbodyType2D.Kinematic;
                 }
-                
-                StartCoroutine(InvincibilityCoroutine());
             }
             
             _isRespawning = false;
         }
         
-        /// <summary>
-        /// 리스폰 처리
-        /// </summary>
         public void Respawn()
         {
             if (_isRespawning) return;
@@ -193,77 +167,27 @@ namespace Pathfinder.Player
                 {
                     rb.linearVelocity = Vector2.zero;
                     rb.angularVelocity = 0f;
-                    rb.bodyType = RigidbodyType2D.Kinematic;
                 }
-                
-                StartCoroutine(InvincibilityCoroutine());
             }
             
             _isRespawning = false;
         }
         
-        /// <summary>
-        /// 무적 상태 코루틴
-        /// </summary>
-        private System.Collections.IEnumerator InvincibilityCoroutine()
-        {
-            _isInvincible = true;
-            
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player == null)
-            {
-                _isInvincible = false;
-                yield break;
-            }
-            
-            var collider = player.GetComponent<Collider2D>();
-            var rb = player.GetComponent<Rigidbody2D>();
-            
-            bool wasKinematic = false;
-            if (rb != null)
-            {
-                wasKinematic = rb.bodyType == RigidbodyType2D.Kinematic;
-                rb.bodyType = RigidbodyType2D.Kinematic;
-            }
-            
-            yield return new WaitForSeconds(_respawnInvincibilityTime);
-            
-            if (rb != null && !wasKinematic)
-            {
-                rb.bodyType = RigidbodyType2D.Dynamic;
-                rb.linearVelocity = Vector2.zero;
-            }
-            
-            _isInvincible = false;
-        }
-        
-        /// <summary>
-        /// 마지막 체크포인트 위치 반환
-        /// </summary>
         public Vector3 GetLastCheckpoint()
         {
             return _lastCheckpoint;
         }
         
-        /// <summary>
-        /// 체크포인트 설정
-        /// </summary>
         public void SetCheckpoint(Vector3 position)
         {
             _lastCheckpoint = position;
         }
         
-        /// <summary>
-        /// 사망 횟수 반환
-        /// </summary>
         public int GetDeathCount()
         {
             return _deathCount;
         }
         
-        /// <summary>
-        /// 사망 횟수 리셋
-        /// </summary>
         public void ResetDeathCount()
         {
             _deathCount = 0;

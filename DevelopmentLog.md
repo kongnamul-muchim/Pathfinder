@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-03-19: Player Movement Improvements
+
+### 변경사항
+
+#### 1. 무적 시스템 삭제 (DeathManager.cs)
+- `_respawnInvincibilityTime` 필드 삭제
+- `_isInvincible` 변수 삭제
+- `InvincibilityCoroutine()` 메서드 삭제
+- Kinematic 설정 로직 삭제
+- 리스폰 시 물리 속도만 리셋
+
+#### 2. 벽 충돌 로직 삭제 (PlayerController.cs)
+- `_wallCheckDistance`, `_wallSlideSpeed`, `_wallLayer`, `_excludeWallTags` 필드 삭제
+- `_isTouchingWall`, `_wallDirection` 변수 삭제
+- `CheckWallCollision()` 메서드 삭제
+- `IsExcludedFromWall()` 메서드 삭제
+
+#### 3. 벽 달라붙음 현상 수정
+```csharp
+// FixedUpdate 말미에 추가
+if (!_isDashing && Mathf.Abs(_horizontalInput) > 0.1f && Mathf.Abs(_rb.linearVelocity.x) < 0.1f)
+{
+    velocity = _rb.linearVelocity;
+    velocity.x = _horizontalInput * 0.5f;  // 작은 속도로 미끄러짐
+    _rb.linearVelocity = velocity;
+}
+```
+
+### 효과
+- 무적 관련 버그 제거
+- 벽에 달라붙지 않고 자연스럽게 미끄러짐
+- 코드 간소화
+
+### Commit: 9e08520
+
+---
+
 ## 2026-03-19: Parallax Shader Graph Support
 
 ### 문제 해결
