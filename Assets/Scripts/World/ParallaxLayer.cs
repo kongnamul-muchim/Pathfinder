@@ -21,7 +21,7 @@ namespace Pathfinder.World
         
         [Header("Shader")]
         [Tooltip("Offset 적용할 텍스처 프로퍼티 이름")]
-        [SerializeField] private string _textureProperty = "_BaseMap";
+        [SerializeField] private string _textureProperty = "_MainTex";
         
         [Header("Sorting")]
         [Tooltip("렌더링 순서 (낮을수록 뒤)")]

@@ -7,9 +7,8 @@
 ## 2026-03-19: Parallax System Simplified
 
 ### 문제 해결
-1. **Offset 미작동**: `_MainTex` → `_BaseMap`으로 변경 (URP 호환)
-2. **버벅거림**: Transform 즉시 이동 → `Lerp`로 부드러운 이동
-3. **TextureWidth 불필요**: 단순화된 Offset 계산
+1. **버벅거림**: Transform 즉시 이동 → `Lerp`로 부드러운 이동
+2. **TextureWidth 불필요**: 단순화된 Offset 계산
 
 ### ParallaxLayer.cs 변경사항
 ```csharp
@@ -28,7 +27,7 @@ _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
 | Parallax Speed | 0.5 | 0~1: 낮을수록 풍경 변화 느림 |
 | Offset Multiplier | 1.0 | Offset 배수 |
 | Smooth Speed | 5.0 | 부드러운 이동 속도 |
-| Texture Property | `_BaseMap` | URP용 텍스처 프로퍼티 |
+| Texture Property | `_MainTex` | 텍스처 프로퍼티 (셰이더에 따라 다름) |
 
 ### Speed 설정 예시
 | 배경 | Speed | 효과 |
@@ -39,7 +38,9 @@ _material.SetTextureOffset(_texturePropertyId, new Vector2(offsetX, 0));
 
 ### 주의사항
 - Texture Wrap Mode: `Repeat` 설정 필수
-- URP Shader에서는 `_BaseMap` 사용 (Sprites/Default는 `_MainTex`)
+- **Texture Property**: 셰이더에 따라 다름
+  - Sprites/Default: `_MainTex` (기본값)
+  - URP/Lit, URP/Unlit: `_BaseMap` (필요시 Inspector에서 변경)
 
 ### Commit: 415d361
 
